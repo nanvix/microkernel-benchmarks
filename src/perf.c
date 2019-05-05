@@ -22,56 +22,42 @@
  * SOFTWARE.
  */
 
-#ifndef _KBENCH_H_
-#define _KBENCH_H_
+#include <nanvix.h>
+#include "kbench.h"
 
-	#include <stdint.h>
+#ifdef __benchmark_perf__
 
-	/**
-	 * @brief Number of benchmark iterations.
+/**
+ * @brief Benchmarks Performance Monitoring Overhead
+ */
+void benchmark_perf(void)
+{
+	uint64_t reg;
+
+	/*
+	 * TODO: Query performance monitoring capabilities.
 	 */
-	#define NITERATIONS 30
 
-	/**
-	 * @brief Iterations to skip on warmup.
-	 */
-	#define SKIP 10
-
-	/**
-	 * @brief Casts something to a uint32_t.
-	 */
-	#define UINT32(x) ((uint32_t)((x) & 0xffffffff))
-
-	/**
-	 * @brief Alias for kprintf().
-	 */
-	#define printf(fmt, ...) kprintf(fmt, ##__VA_ARGS__)
-
-	/**
-	 * @brief Alias for KASSERT().
-	 */
-	#undef assert
-	#define assert(x) KASSERT(x)
-
-	/**
-	 * @brief Performance event.
-	 */
-	struct perf_event
+	for (size_t j = 0; j < ARRAY_LENGTH(perf_events); j++)
 	{
-		const char *name; /**< Event name.   */
-		int num;          /**< Event number. */
-	};
+		for (int i = SKIP; i < NITERATIONS + SKIP; i++)
+		{
+			nanvix_perf_start(0, perf_events[j].num);
 
-	/**
-	 * @brief Performance events.
-	 */
-	extern struct perf_event perf_events[8];
 
-	/**
-	 * @name Benchmarks
-	 */
-	/**@{*/
-	extern void benchmark_perf(void);
-	/**@}*/
+			nanvix_perf_stop(0);
+			reg = nanvix_perf_read(0);
 
-#endif /* _KBENCH_H_ */
+			if (i >= SKIP)
+			{
+				kprintf("[benchmarks][perf] %d %s %d",
+					i - SKIP,
+					perf_events[j].name,
+					UINT32(reg)
+				);
+			}
+		}
+	}
+}
+
+#endif /* __benchmark_perf__ */

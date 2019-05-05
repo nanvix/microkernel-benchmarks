@@ -50,6 +50,14 @@ int main(int argc, const char *argv[])
 	((void) argc);
 	((void) argv);
 
+	kprintf("--------------------------------------------------------------------------------");
+
+#ifdef __benchmark_perf__
+	benchmark_perf();
+#endif
+
+	kprintf("--------------------------------------------------------------------------------");
+
 	/* Shutdown. */
 	shutdown();
 
