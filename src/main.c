@@ -66,6 +66,10 @@ int main(int argc, const char *argv[])
 	benchmark_kcall_remote();
 #endif
 
+#ifdef __benchmark_matrix__
+	benchmark_matrix();
+#endif
+
 	kprintf("--------------------------------------------------------------------------------");
 
 	/* Shutdown. */
