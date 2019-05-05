@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
+ * Copyright(c) 2011-2019 The Maintainers of Nanvix
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,45 +25,40 @@
 #include <nanvix.h>
 #include "kbench.h"
 
-/**
- * Performance events.
- */
-struct perf_event perf_events[] = {
-	{ "cycles",        PERF_CYCLES        },
-	{ "branches",      PERF_BRANCH_TAKEN  },
-	{ "branch_stalls", PERF_BRANCH_STALLS },
-	{ "reg_stalls",    PERF_REG_STALLS    },
-	{ "dcache_stalls", PERF_DCACHE_STALLS },
-	{ "icache_stalls", PERF_ICACHE_STALLS },
-	{ "dtlb_stalls",   PERF_DTLB_STALLS   },
-	{ "itlb_stalls",   PERF_ITLB_STALLS   },
-};
-
-/**
- * @brief Lunches user-land testing units.
- *
- * @param argc Argument counter.
- * @param argv Argument variables.
- */
-int main(int argc, const char *argv[])
-{
-	((void) argc);
-	((void) argv);
-
-	kprintf("--------------------------------------------------------------------------------");
-
-#ifdef __benchmark_perf__
-	benchmark_perf();
-#endif
-
 #ifdef __benchmark_kcall_local__
-	benchmark_kcall_local();
-#endif
 
-	kprintf("--------------------------------------------------------------------------------");
+/**
+ * @brief Benchmarks a remote Kernel Call
+ */
+void benchmark_kcall_local(void)
+{
+	uint64_t reg;
 
-	/* Shutdown. */
-	shutdown();
+	/*
+	 * TODO: Query performance monitoring capabilities.
+	 */
 
-	return (0);
+	for (size_t j = 0; j < ARRAY_LENGTH(perf_events); j++)
+	{
+		for (int i = SKIP; i < NITERATIONS + SKIP; i++)
+		{
+			nanvix_perf_start(0, perf_events[j].num);
+
+				syscall0(NR_thread_get_id);
+
+			nanvix_perf_stop(0);
+			reg = nanvix_perf_read(0);
+
+			if (i >= SKIP)
+			{
+				kprintf("[benchmarks][kcall_local] %d %s %d",
+					i - SKIP,
+					perf_events[j].name,
+					UINT32(reg)
+				);
+			}
+		}
+	}
 }
+
+#endif /* __benchmark_kcall_local__ */

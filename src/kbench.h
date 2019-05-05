@@ -72,6 +72,7 @@
 	 */
 	/**@{*/
 	extern void benchmark_perf(void);
+	extern void benchmark_kcall_local(void);
 	/**@}*/
 
 #endif /* _KBENCH_H_ */
