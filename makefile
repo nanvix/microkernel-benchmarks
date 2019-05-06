@@ -65,7 +65,7 @@ export LIBNANVIX = $(LIBDIR)/libnanvix-$(TARGET).a
 export ELFBIN := ukernel-benchmarks
 
 # Image
-export IMAGE := ukernel-$(KERNEL)
+export IMAGE := ukernel-$(KERNEL).img
 
 #===============================================================================
 # Target-Specific Make Rules
@@ -108,7 +108,7 @@ make-dirs:
 
 # Build Binary Image
 image-$(IMAGE): | make-dirs all-target
-	bash $(UTILSDIR)/nanvix-build-image.sh $(BINDIR) $(ELFBIN) $(IMAGE)
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(ELFBIN)
 
 # Cleans builds.
 clean: clean-target
