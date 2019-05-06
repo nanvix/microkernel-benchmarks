@@ -60,6 +60,10 @@ int main(int argc, const char *argv[])
 	benchmark_kcall_local();
 #endif
 
+#ifdef __benchmark_kcall_remote__
+	benchmark_kcall_remote();
+#endif
+
 	kprintf("--------------------------------------------------------------------------------");
 
 	/* Shutdown. */
