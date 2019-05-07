@@ -103,6 +103,7 @@ all: image-$(IMAGE)
 
 # Make Directories
 make-dirs:
+	@mkdir -p $(INCDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(LIBDIR)
 

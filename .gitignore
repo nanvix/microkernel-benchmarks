@@ -17,3 +17,6 @@ lib/
 
 # Ctags
 tags
+
+# Microkernel Headers
+include/
