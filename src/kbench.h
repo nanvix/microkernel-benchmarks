@@ -149,6 +149,7 @@
 	extern void benchmark_kcall_remote(void);
 	extern void benchmark_matrix(void);
 	extern void benchmark_buffer(void);
+	extern void benchmark_memmove(void);
 	/**@}*/
 
 #endif /* _KBENCH_H_ */

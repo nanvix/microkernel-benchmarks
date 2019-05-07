@@ -70,6 +70,10 @@ int main(int argc, const char *argv[])
 	benchmark_matrix();
 #endif
 
+#ifdef __benchmark_memmove__
+	benchmark_memmove();
+#endif
+
 #ifdef __benchmark_buffer__
 	benchmark_buffer();
 #endif
