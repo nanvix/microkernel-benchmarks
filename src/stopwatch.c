@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
+ * Copyright(c) 2011-2019 The Maintainers of Nanvix
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,53 +23,40 @@
  */
 
 #include <nanvix.h>
-#include "kbench.h"
+#include <stdint.h>
+
+#ifdef __i486__
 
 /**
- * Performance events.
+ * @brief Dummy clock_read().
  */
-struct perf_event perf_events[] = {
-	{ "cycles",        PERF_CYCLES        },
-	{ "branches",      PERF_BRANCH_TAKEN  },
-	{ "branch_stalls", PERF_BRANCH_STALLS },
-	{ "reg_stalls",    PERF_REG_STALLS    },
-	{ "dcache_stalls", PERF_DCACHE_STALLS },
-	{ "icache_stalls", PERF_ICACHE_STALLS },
-	{ "dtlb_stalls",   PERF_DTLB_STALLS   },
-	{ "itlb_stalls",   PERF_ITLB_STALLS   },
-};
-
-/**
- * @brief Lunches user-land testing units.
- *
- * @param argc Argument counter.
- * @param argv Argument variables.
- */
-int main(int argc, const char *argv[])
+uint64_t clock_read(void)
 {
-	((void) argc);
-	((void) argv);
-
-	stopwatch_init();
-
-	kprintf("--------------------------------------------------------------------------------");
-
-#ifdef __benchmark_perf__
-	benchmark_perf();
-#endif
-
-#ifdef __benchmark_kcall_local__
-	benchmark_kcall_local();
-#endif
-
-#ifdef __benchmark_kcall_remote__
-	benchmark_kcall_remote();
-#endif
-
-	kprintf("--------------------------------------------------------------------------------");
-
-	/* Shutdown. */
-	shutdown();
-
 	return (0);
+}
+
+#endif
+
+/**
+ * @brief Stopwatch delay.
+ */
+static uint64_t stopwatch_delay = 0;
+
+/**
+ * @todo TODO provide a detailed description for this function.
+ */
+void stopwatch_init(void)
+{
+	uint64_t t0 = clock_read();
+	uint64_t t1 = clock_read();
+
+	stopwatch_delay = t1 - t0;
+}
+
+/**
+ * @brief Computes the time difference on the stopwatch.
+ */
+uint64_t stopwatch_diff(uint64_t t0, uint64_t t1)
+{
+	return ((t1 - t0 - stopwatch_delay));
 }

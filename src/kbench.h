@@ -53,6 +53,35 @@
 	#undef assert
 	#define assert(x) KASSERT(x)
 
+/*============================================================================*
+ * Stopwatch                                                                  *
+ *============================================================================*/
+
+	/**
+	 * @brief Initializes the stopwatch.
+	 */
+	extern void stopwatch_init(void);
+
+	/**
+	 * @brief Computes the time difference on the stopwatch.
+	 *
+	 * @param t0 First timestamp.
+	 * @param t1 Second timestamp.
+	 *
+	 * @returns The difference between t0 and t1.
+	 */
+	extern uint64_t stopwatch_diff(uint64_t t0, uint64_t t1);
+
+	/**
+	 * @brief Reads the stopwatch.
+	 *
+	 * @param The current timestamp of the stopwatch.
+	 */
+	static inline uint64_t stopwatch_read(void)
+	{
+		return (clock_read());
+	}
+
 	/**
 	 * @brief Performance event.
 	 */
