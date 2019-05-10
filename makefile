@@ -33,7 +33,7 @@ export VERBOSE ?= no
 export RELEASE ?= true
 
 # Benchmark Kernel
-export KERNEL ?= kcall-local
+export KERNEL ?= perf
 
 #===============================================================================
 # Directories
