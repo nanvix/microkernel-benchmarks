@@ -30,10 +30,10 @@
 export VERBOSE ?= no
 
 # Release Version?
-export RELEASE ?= true
+export RELEASE ?= no
 
 # Benchmark Kernel
-export KERNEL ?= kcall-local
+export KERNEL ?= perf
 
 #===============================================================================
 # Directories
@@ -65,7 +65,7 @@ export LIBNANVIX = $(LIBDIR)/libnanvix-$(TARGET).a
 export ELFBIN := ukernel-benchmarks
 
 # Image
-export IMAGE := ukernel-$(KERNEL)
+export IMAGE := ukernel-$(KERNEL).img
 
 #===============================================================================
 # Target-Specific Make Rules
@@ -103,12 +103,13 @@ all: image-$(IMAGE)
 
 # Make Directories
 make-dirs:
+	@mkdir -p $(INCDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(LIBDIR)
 
 # Build Binary Image
 image-$(IMAGE): | make-dirs all-target
-	bash $(UTILSDIR)/nanvix-build-image.sh $(BINDIR) $(ELFBIN) $(IMAGE)
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(ELFBIN)
 
 # Cleans builds.
 clean: clean-target

@@ -25,24 +25,17 @@
 #include <nanvix.h>
 #include "kbench.h"
 
-#ifdef __benchmark_kcall_local__
+#ifdef __benchmark_memmove__
 
 /**
  * @name Benchmark Parameters
  */
 /**@{*/
-#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
+#define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
+#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
+#define OBJSIZE              (64*1024) /**< Object Size                            */
 /**@}*/
-
-/**
- * @brief Thread info.
- */
-struct tdata
-{
-	int tnum;  /**< Thread Number */
-} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
 
 /**
  * @name Benchmark Kernel Parameters
@@ -52,12 +45,36 @@ static int NTHREADS; /**< Number of Working Threads */
 /**@}*/
 
 /**
- * @brief Issues a local kernel call.
+ * @brief Thread info.
+ */
+struct tdata
+{
+	int tnum;  /**< Thread Number */
+	int start; /**< Start Byte    */
+	int end;   /**< End Byte      */
+} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
+
+/**
+ * @brief Buffers.
+ */
+/**@{*/
+static word_t obj1[OBJSIZE/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
+static word_t obj2[OBJSIZE/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
+/**@}*/
+
+/**
+ * @brief Move Bytes in Memory
  */
 static void *task(void *arg)
 {
 	struct tdata *t = arg;
+	int start = t->start;
+	int end = t->end;
 	uint64_t t0, t1;
+
+	/* Warm up. */
+	memfill(&obj1[start], (word_t) - 1, end - start);
+	memfill(&obj2[start], 0, end - start);
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
@@ -65,7 +82,11 @@ static void *task(void *arg)
 		perf_start(1, PERF_ICACHE_STALLS);
 		t0 = stopwatch_read();
 
-			syscall0(NR_thread_get_id);
+			memcopy(&obj1[start], &obj2[start], end - start);
+
+			/*
+			 * TODO: flush data cache
+			 */
 
 		t1 = stopwatch_read();
 		perf_stop(1);
@@ -73,13 +94,15 @@ static void *task(void *arg)
 
 		if (i >= SKIP)
 		{
-			printf("%s %d %s %d %s %d %s %d %s %d %s %d",
-				"[benchmarks][kcall_local]",
+			printf("%s %d %s %d %s %d %s %d %s %d %s %d %s %d",
+				"[benchmarks][memmove]",
 				i - SKIP,
 				"nthreads",
 				NTHREADS,
 				"tnum",
 				t->tnum,
+				"objsize",
+				(end - start)*WORD_SIZE,
 				"cycles",
 				UINT32(stopwatch_diff(t0, t1)),
 				"d-stalls",
@@ -94,21 +117,26 @@ static void *task(void *arg)
 }
 
 /**
- * @brief Local Kernel Call Benchmark Kernel
+ * @brief Memory Move Benchmark Kernel
  *
  * @param nthreads Number of working threads.
  */
-static void kernel_kcall_local(int nthreads)
+static void kernel_memmove(int nthreads)
 {
+	int nbytes;
 	kthread_t tid[NTHREADS_MAX];
 
 	/* Save kernel parameters. */
 	NTHREADS = nthreads;
 
+	nbytes = (OBJSIZE/WORD_SIZE)/nthreads;
+
 	/* Spawn threads. */
 	for (int i = 0; i < nthreads; i++)
 	{
 		/* Initialize thread data structure. */
+		tdata[i].start = nbytes*i;
+		tdata[i].end = (i == (nthreads - 1)) ? (OBJSIZE/WORD_SIZE) : (i + 1)*nbytes;
 		tdata[i].tnum = i;
 
 		kthread_create(&tid[i], task, &tdata[i]);
@@ -120,22 +148,20 @@ static void kernel_kcall_local(int nthreads)
 }
 
 /**
- * @brief Local Kernel Call Benchmark
- *
- * @param size Transfer size.
+ * @brief Memory Move Benchmark
  */
-void benchmark_kcall_local(void)
+void benchmark_memmove(void)
 {
 #ifndef NDEBUG
 
-	kernel_kcall_local(NTHREADS_MAX);
+	kernel_memmove(1);
 
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_kcall_local(nthreads);
+		kernel_memmove(nthreads);
 
 #endif
 }
 
-#endif /* __benchmark_kcall_local__ */
+#endif /* __benchmark_memmove__ */

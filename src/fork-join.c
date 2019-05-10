@@ -23,9 +23,10 @@
  */
 
 #include <nanvix.h>
+#include <stdint.h>
 #include "kbench.h"
 
-#ifdef __benchmark_kcall_local__
+#ifdef __benchmark_fork_join__
 
 /**
  * @name Benchmark Parameters
@@ -37,105 +38,80 @@
 /**@}*/
 
 /**
- * @brief Thread info.
- */
-struct tdata
-{
-	int tnum;  /**< Thread Number */
-} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
-
-/**
- * @name Benchmark Kernel Parameters
- */
-/**@{*/
-static int NTHREADS; /**< Number of Working Threads */
-/**@}*/
-
-/**
- * @brief Issues a local kernel call.
+ * @brief Dummy task.
+ *
+ * @param arg Unused argument.
  */
 static void *task(void *arg)
 {
-	struct tdata *t = arg;
-	uint64_t t0, t1;
-
-	for (int i = 0; i < NITERATIONS + SKIP; i++)
-	{
-		perf_start(0, PERF_DCACHE_STALLS);
-		perf_start(1, PERF_ICACHE_STALLS);
-		t0 = stopwatch_read();
-
-			syscall0(NR_thread_get_id);
-
-		t1 = stopwatch_read();
-		perf_stop(1);
-		perf_stop(0);
-
-		if (i >= SKIP)
-		{
-			printf("%s %d %s %d %s %d %s %d %s %d %s %d",
-				"[benchmarks][kcall_local]",
-				i - SKIP,
-				"nthreads",
-				NTHREADS,
-				"tnum",
-				t->tnum,
-				"cycles",
-				UINT32(stopwatch_diff(t0, t1)),
-				"d-stalls",
-				UINT32(perf_read(0)),
-				"i-stalls",
-				UINT32(perf_read(1))
-			);
-		}
-	}
+	((void) arg);
 
 	return (NULL);
 }
 
 /**
- * @brief Local Kernel Call Benchmark Kernel
+ * @brief Fork-Join Kernel
  *
  * @param nthreads Number of working threads.
  */
-static void kernel_kcall_local(int nthreads)
+void kernel_fork_join(int nthreads)
 {
+	uint64_t tfork, tjoin, t0, t1;
 	kthread_t tid[NTHREADS_MAX];
 
-	/* Save kernel parameters. */
-	NTHREADS = nthreads;
-
-	/* Spawn threads. */
-	for (int i = 0; i < nthreads; i++)
+	for (int i = 0; i < (NITERATIONS + SKIP); i++)
 	{
-		/* Initialize thread data structure. */
-		tdata[i].tnum = i;
+		t0 = stopwatch_read();
 
-		kthread_create(&tid[i], task, &tdata[i]);
+			/* Spawn threads. */
+			for (int j = 0; j < nthreads; j++)
+				kthread_create(&tid[j], task, NULL);
+
+		t1 = stopwatch_read();
+
+			tfork = stopwatch_diff(t0, t1);
+
+		t0 = stopwatch_read();
+
+			/* Wait for threads. */
+			for (int j = 0; j < nthreads; j++)
+				kthread_join(tid[j], NULL);
+
+		t1 = stopwatch_read();
+
+		tjoin = stopwatch_diff(t0, t1);
+
+		if (i >= SKIP)
+		{
+			printf("%s %d %s %d %s %d %s %d",
+				"[benchmarks][fork-join]",
+				i - SKIP,
+				"nthreads",
+				nthreads,
+				"fork",
+				UINT32(tfork),
+				"join",
+				UINT32(tjoin)
+			);
+		}
 	}
-
-	/* Wait for threads. */
-	for (int i = 0; i < nthreads; i++)
-		kthread_join(tid[i], NULL);
 }
 
 /**
- * @brief Local Kernel Call Benchmark
- *
- * @param size Transfer size.
+ * @brief Fork-Join Benchmark
  */
-void benchmark_kcall_local(void)
+void benchmark_fork_join(void)
 {
 #ifndef NDEBUG
 
-	kernel_kcall_local(NTHREADS_MAX);
+	kernel_fork_join(NTHREADS_MAX);
 
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_kcall_local(nthreads);
+		kernel_fork_join(nthreads);
 
 #endif
 }
 
-#endif /* __benchmark_kcall_local__ */
+#endif /* __benchmark_fork_join__ */

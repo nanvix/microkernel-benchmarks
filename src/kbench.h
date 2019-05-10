@@ -30,7 +30,11 @@
 	/**
 	 * @brief Number of benchmark iterations.
 	 */
-	#define NITERATIONS 30
+	#ifdef NDEBUG
+		#define NITERATIONS 30
+	#else
+		#define NITERATIONS 1
+	#endif
 
 	/**
 	 * @brief Iterations to skip on warmup.
@@ -47,11 +51,80 @@
 	 */
 	#define printf(fmt, ...) kprintf(fmt, ##__VA_ARGS__)
 
+/*============================================================================*
+ * Stopwatch                                                                  *
+ *============================================================================*/
+
 	/**
-	 * @brief Alias for KASSERT().
+	 * @brief Initializes the stopwatch.
 	 */
-	#undef assert
-	#define assert(x) KASSERT(x)
+	extern void stopwatch_init(void);
+
+	/**
+	 * @brief Computes the time difference on the stopwatch.
+	 *
+	 * @param t0 First timestamp.
+	 * @param t1 Second timestamp.
+	 *
+	 * @returns The difference between t0 and t1.
+	 */
+	extern uint64_t stopwatch_diff(uint64_t t0, uint64_t t1);
+
+	/**
+	 * @brief Reads the stopwatch.
+	 *
+	 * @param The current timestamp of the stopwatch.
+	 */
+	static inline uint64_t stopwatch_read(void)
+	{
+		return (clock_read());
+	}
+
+/*============================================================================*
+ * Memory Functions                                                           *
+ *============================================================================*/
+
+	/**
+	 * @brief Fills words in memory.
+	 *
+	 * @param ptr Pointer to target memory area.
+	 * @param c   Character to use.
+	 * @param n   Number of bytes to be set.
+	 */
+	static inline void memfill(word_t *ptr, word_t c, size_t n)
+	{
+		word_t *p;
+
+		p = ptr;
+
+		/* Set words. */
+		for (size_t i = 0; i < n; i++)
+			*p++ = c;
+	}
+
+	/**
+	 * @brief Copy words in memory.
+	 *
+	 * @param dest Target memory area.
+	 * @param src  Source memory area.
+	 * @param n    Number of bytes to be copied.
+	 */
+	static inline void memcopy(word_t *dest, const word_t *src, size_t n)
+	{
+		word_t *d;       /* Write pointer. */
+		const word_t* s; /* Read pointer.  */
+
+		s = src;
+		d = dest;
+
+		/* Copy words. */
+		for (size_t i = 0; i < n; i++)
+			*d++ = *s++;
+	}
+
+/*============================================================================*
+ * Kernel benchmark                                                           *
+ *============================================================================*/
 
 	/**
 	 * @brief Performance event.
@@ -74,6 +147,10 @@
 	extern void benchmark_perf(void);
 	extern void benchmark_kcall_local(void);
 	extern void benchmark_kcall_remote(void);
+	extern void benchmark_matrix(void);
+	extern void benchmark_buffer(void);
+	extern void benchmark_memmove(void);
+	extern void benchmark_fork_join(void);
 	/**@}*/
 
 #endif /* _KBENCH_H_ */

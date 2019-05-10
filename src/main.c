@@ -50,6 +50,8 @@ int main(int argc, const char *argv[])
 	((void) argc);
 	((void) argv);
 
+	stopwatch_init();
+
 	kprintf("--------------------------------------------------------------------------------");
 
 #ifdef __benchmark_perf__
@@ -62,6 +64,22 @@ int main(int argc, const char *argv[])
 
 #ifdef __benchmark_kcall_remote__
 	benchmark_kcall_remote();
+#endif
+
+#ifdef __benchmark_matrix__
+	benchmark_matrix();
+#endif
+
+#ifdef __benchmark_memmove__
+	benchmark_memmove();
+#endif
+
+#ifdef __benchmark_buffer__
+	benchmark_buffer();
+#endif
+
+#ifdef __benchmark_fork_join__
+	benchmark_fork_join();
 #endif
 
 	kprintf("--------------------------------------------------------------------------------");
