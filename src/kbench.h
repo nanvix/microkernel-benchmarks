@@ -30,7 +30,11 @@
 	/**
 	 * @brief Number of benchmark iterations.
 	 */
-	#define NITERATIONS 30
+	#ifdef NDEBUG
+		#define NITERATIONS 30
+	#else
+		#define NITERATIONS 1
+	#endif
 
 	/**
 	 * @brief Iterations to skip on warmup.
