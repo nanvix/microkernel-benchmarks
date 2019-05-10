@@ -30,7 +30,7 @@
 export VERBOSE ?= no
 
 # Release Version?
-export RELEASE ?= true
+export RELEASE ?= no
 
 # Benchmark Kernel
 export KERNEL ?= perf
