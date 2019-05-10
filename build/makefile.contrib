@@ -25,9 +25,9 @@
 # Builds Contrib Projects
 contrib: make-dirs
 	$(MAKE) -C $(CONTRIBDIR)/microkernel contrib
-	$(MAKE) -C $(CONTRIBDIR)/microkernel install PREFIX=$(ROOTDIR)
+	$(MAKE) -C $(CONTRIBDIR)/microkernel install PREFIX=$(ROOTDIR) RELEASE=true
 
 # Cleans Contrib Projects
 contrib-uninstall:
 	$(MAKE) -C $(CONTRIBDIR)/microkernel contrib-uninstall
-	$(MAKE) -C $(CONTRIBDIR)/microkernel uninstall PREFIX=$(ROOTDIR)
+	$(MAKE) -C $(CONTRIBDIR)/microkernel uninstall PREFIX=$(ROOTDIR) RELEASE=true
