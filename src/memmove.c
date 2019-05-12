@@ -28,14 +28,39 @@
 #ifdef __benchmark_memmove__
 
 /**
+ * @brief Number of events to profile.
+ */
+#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+
+/**
  * @name Benchmark Parameters
  */
 /**@{*/
-#define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
+#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
+#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
 #define OBJSIZE              (64*1024) /**< Object Size                            */
 /**@}*/
+
+/**
+ * Performance events.
+ */
+static int perf_events[BENCHMARK_PERF_EVENTS] = {
+	PERF_CYCLES,
+	PERF_ICACHE_HITS,
+	PERF_ICACHE_MISSES,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_HITS,
+	PERF_DCACHE_MISSES,
+	PERF_DCACHE_STALLS,
+	PERF_BUNDLES,
+	PERF_BRANCH_TAKEN,
+	PERF_BRANCH_STALLS,
+	PERF_REG_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_DTLB_STALLS,
+	PERF_STREAM_STALLS
+};
 
 /**
  * @name Benchmark Kernel Parameters
@@ -63,6 +88,38 @@ static word_t obj2[OBJSIZE/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
 /**@}*/
 
 /**
+ * @brief Dump execution statistics.
+ *
+ * @param it      Benchmark iteration.
+ * @param objsize Object size.
+ * @param stats   Execution statistics.
+ */
+static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
+{
+	printf("%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][memmove]",
+		it,
+		NTHREADS,
+		objsize,
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6]),
+		UINT32(stats[7]),
+		UINT32(stats[8]),
+		UINT32(stats[9]),
+		UINT32(stats[10]),
+		UINT32(stats[11]),
+		UINT32(stats[12]),
+		UINT32(stats[13]),
+		UINT32(stats[13])
+	);
+}
+
+/**
  * @brief Move Bytes in Memory
  */
 static void *task(void *arg)
@@ -70,7 +127,10 @@ static void *task(void *arg)
 	struct tdata *t = arg;
 	int start = t->start;
 	int end = t->end;
-	uint64_t t0, t1;
+	uint64_t t0, t1, tmp;
+	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
+
+	stats[0] = UINT64_MAX;
 
 	/* Warm up. */
 	memfill(&obj1[start], (word_t) - 1, end - start);
@@ -78,39 +138,24 @@ static void *task(void *arg)
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
-		perf_start(0, PERF_DCACHE_STALLS);
-		perf_start(1, PERF_ICACHE_STALLS);
-		t0 = stopwatch_read();
+		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
+		{
+			t0 = stopwatch_read();
+			perf_start(0, perf_events[j]);
 
-			memcopy(&obj1[start], &obj2[start], end - start);
+				memcopy(&obj1[start], &obj2[start], end - start);
 
-			/*
-			 * TODO: flush data cache
-			 */
+			perf_stop(0);
+			t1 = stopwatch_read();
 
-		t1 = stopwatch_read();
-		perf_stop(1);
-		perf_stop(0);
+			tmp = stopwatch_diff(t0, t1);
+			if (tmp < stats[0])
+				stats[0] = tmp;
+			stats[j + 1] = perf_read(0);
+		}
 
 		if (i >= SKIP)
-		{
-			printf("%s %d %s %d %s %d %s %d %s %d %s %d %s %d",
-				"[benchmarks][memmove]",
-				i - SKIP,
-				"nthreads",
-				NTHREADS,
-				"tnum",
-				t->tnum,
-				"objsize",
-				(end - start)*WORD_SIZE,
-				"cycles",
-				UINT32(stopwatch_diff(t0, t1)),
-				"d-stalls",
-				UINT32(perf_read(0)),
-				"i-stalls",
-				UINT32(perf_read(1))
-			);
-		}
+			benchmark_dump_stats(i - SKIP, (end - start)*WORD_SIZE, stats);
 	}
 
 	return (NULL);
