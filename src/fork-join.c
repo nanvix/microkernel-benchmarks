@@ -29,6 +29,11 @@
 #ifdef __benchmark_fork_join__
 
 /**
+ * @brief Number of events to profile.
+ */
+#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+
+/**
  * @name Benchmark Parameters
  */
 /**@{*/
@@ -36,6 +41,88 @@
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
 #define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
 /**@}*/
+
+/**
+ * Performance events.
+ */
+static int perf_events[BENCHMARK_PERF_EVENTS] = {
+	PERF_CYCLES,
+	PERF_ICACHE_HITS,
+	PERF_ICACHE_MISSES,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_HITS,
+	PERF_DCACHE_MISSES,
+	PERF_DCACHE_STALLS,
+	PERF_BUNDLES,
+	PERF_BRANCH_TAKEN,
+	PERF_BRANCH_STALLS,
+	PERF_REG_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_DTLB_STALLS,
+	PERF_STREAM_STALLS
+};
+
+/**
+ * @name Benchmark Kernel Parameters
+ */
+/**@{*/
+static int NTHREADS; /**< Number of Working Threads */
+/**@}*/
+
+/**
+ * @brief Dump execution statistics.
+ *
+ * @param it    Benchmark iteration.
+ * @param stats Execution statistics.
+ */
+static inline void benchmark_dump_stats(int it, uint64_t *fork_stats, uint64_t *join_stats)
+{
+	printf("%s %d %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][fork-join]",
+		it,
+		"f",
+		NTHREADS,
+		UINT32(fork_stats[0]),
+		UINT32(fork_stats[1]),
+		UINT32(fork_stats[2]),
+		UINT32(fork_stats[3]),
+		UINT32(fork_stats[4]),
+		UINT32(fork_stats[5]),
+		UINT32(fork_stats[6]),
+		UINT32(fork_stats[7]),
+		UINT32(fork_stats[8]),
+		UINT32(fork_stats[9]),
+		UINT32(fork_stats[10]),
+		UINT32(fork_stats[11]),
+		UINT32(fork_stats[12]),
+		UINT32(fork_stats[13]),
+		UINT32(fork_stats[13]),
+		UINT32(fork_stats[14])
+	);
+
+	printf("%s %d %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][fork-join]",
+		it,
+		"j",
+		NTHREADS,
+		UINT32(join_stats[0]),
+		UINT32(join_stats[1]),
+		UINT32(join_stats[2]),
+		UINT32(join_stats[3]),
+		UINT32(join_stats[4]),
+		UINT32(join_stats[5]),
+		UINT32(join_stats[6]),
+		UINT32(join_stats[7]),
+		UINT32(join_stats[8]),
+		UINT32(join_stats[9]),
+		UINT32(join_stats[10]),
+		UINT32(join_stats[11]),
+		UINT32(join_stats[12]),
+		UINT32(join_stats[13]),
+		UINT32(join_stats[13]),
+		UINT32(join_stats[14])
+	);
+}
 
 /**
  * @brief Dummy task.
@@ -56,44 +143,54 @@ static void *task(void *arg)
  */
 void kernel_fork_join(int nthreads)
 {
-	uint64_t tfork, tjoin, t0, t1;
 	kthread_t tid[NTHREADS_MAX];
+	uint64_t t0, t1, tmp;
+	uint64_t fork_stats[BENCHMARK_PERF_EVENTS + 1];
+	uint64_t join_stats[BENCHMARK_PERF_EVENTS + 1];
+
+	/* Save kernel parameters. */
+	NTHREADS = nthreads;
+
+	fork_stats[0] = UINT64_MAX;
+	join_stats[0] = UINT64_MAX;
 
 	for (int i = 0; i < (NITERATIONS + SKIP); i++)
 	{
-		t0 = stopwatch_read();
+		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
+		{
+			t0 = stopwatch_read();
+			perf_start(0, perf_events[j]);
 
-			/* Spawn threads. */
-			for (int j = 0; j < nthreads; j++)
-				kthread_create(&tid[j], task, NULL);
+				/* Spawn threads. */
+				for (int k = 0; k < nthreads; k++)
+					kthread_create(&tid[k], task, NULL);
 
-		t1 = stopwatch_read();
+			perf_stop(0);
+			t1 = stopwatch_read();
 
-			tfork = stopwatch_diff(t0, t1);
+			tmp = stopwatch_diff(t0, t1);
+			if (tmp < fork_stats[0])
+				fork_stats[0] = tmp;
+			fork_stats[j + 1] = perf_read(0);
 
-		t0 = stopwatch_read();
+			t0 = stopwatch_read();
+			perf_start(0, perf_events[j]);
 
-			/* Wait for threads. */
-			for (int j = 0; j < nthreads; j++)
-				kthread_join(tid[j], NULL);
+				/* Wait for threads. */
+				for (int k = 0; k < nthreads; k++)
+					kthread_join(tid[k], NULL);
 
-		t1 = stopwatch_read();
+			perf_stop(0);
+			t1 = stopwatch_read();
 
-		tjoin = stopwatch_diff(t0, t1);
+			tmp = stopwatch_diff(t0, t1);
+			if (tmp < join_stats[0])
+				join_stats[0] = tmp;
+			join_stats[j + 1] = perf_read(0);
+		}
 
 		if (i >= SKIP)
-		{
-			printf("%s %d %s %d %s %d %s %d",
-				"[benchmarks][fork-join]",
-				i - SKIP,
-				"nthreads",
-				nthreads,
-				"fork",
-				UINT32(tfork),
-				"join",
-				UINT32(tjoin)
-			);
-		}
+			benchmark_dump_stats(i - SKIP, fork_stats, join_stats);
 	}
 }
 
