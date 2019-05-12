@@ -26,20 +26,6 @@
 #include "kbench.h"
 
 /**
- * Performance events.
- */
-struct perf_event perf_events[] = {
-	{ "cycles",        PERF_CYCLES        },
-	{ "branches",      PERF_BRANCH_TAKEN  },
-	{ "branch_stalls", PERF_BRANCH_STALLS },
-	{ "reg_stalls",    PERF_REG_STALLS    },
-	{ "dcache_stalls", PERF_DCACHE_STALLS },
-	{ "icache_stalls", PERF_ICACHE_STALLS },
-	{ "dtlb_stalls",   PERF_DTLB_STALLS   },
-	{ "itlb_stalls",   PERF_ITLB_STALLS   },
-};
-
-/**
  * @brief Lunches user-land testing units.
  *
  * @param argc Argument counter.

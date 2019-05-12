@@ -127,20 +127,6 @@
  *============================================================================*/
 
 	/**
-	 * @brief Performance event.
-	 */
-	struct perf_event
-	{
-		const char *name; /**< Event name.   */
-		int num;          /**< Event number. */
-	};
-
-	/**
-	 * @brief Performance events.
-	 */
-	extern struct perf_event perf_events[8];
-
-	/**
 	 * @name Benchmarks
 	 */
 	/**@{*/
