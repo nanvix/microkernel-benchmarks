@@ -30,28 +30,61 @@
 #ifdef __benchmark_buffer__
 
 /**
+ * @brief Number of events to profile.
+ */
+#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+
+/**
  * @name Benchmark Parameters
  */
 /**@{*/
 #define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
 #define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
-#define OBJSIZE                  8192  /**< Object Size                            */
-#define BUFLEN                      8  /**< Buffer Length                          */
-#define NOBJECTS                   16  /**< Number of Objects                      */
+#define OBJSIZE_MIN           (2*1024) /**< Minimum Object Size                    */
+#define OBJSIZE_MAX          (32*1024) /**< Maximum Object Size                    */
+#define OBJSIZE_STEP          (2*1024) /**< Object Size                            */
+#define BUFLEN                      4  /**< Buffer Length                          */
+#define NOBJECTS                   32  /**< Number of Objects                      */
 /**@}*/
+
+/**
+ * Performance events.
+ */
+static int perf_events[BENCHMARK_PERF_EVENTS] = {
+	PERF_CYCLES,
+	PERF_ICACHE_HITS,
+	PERF_ICACHE_MISSES,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_HITS,
+	PERF_DCACHE_MISSES,
+	PERF_DCACHE_STALLS,
+	PERF_BUNDLES,
+	PERF_BRANCH_TAKEN,
+	PERF_BRANCH_STALLS,
+	PERF_REG_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_DTLB_STALLS,
+	PERF_STREAM_STALLS
+};
 
 /**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
 static int NTHREADS;   /**< Number of Working Threads */
+static size_t OBJSIZE; /**< Object Size               */
 /**@}*/
 
 /**
  * @brief Current benchmark iteration.
  */
 static int iteration = 0;
+
+/**
+ * @brief Current performance event being monitored.
+ */
+static int perf = 0;
 
 /**
  * @brief Buffer.
@@ -63,7 +96,7 @@ struct buffer
 	struct nanvix_mutex mutex;
 	struct nanvix_semaphore full;
 	struct nanvix_semaphore empty;
-	word_t data[BUFLEN*OBJSIZE/WORD_SIZE];
+	word_t data[BUFLEN*OBJSIZE_MAX/WORD_SIZE];
 };
 
 /**
@@ -74,7 +107,7 @@ struct tdata
 	int n;
 	int tnum;
 	struct buffer *buf;
-	word_t data[OBJSIZE/WORD_SIZE];
+	word_t data[OBJSIZE_MAX/WORD_SIZE];
 } tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
 
 /**
@@ -136,18 +169,58 @@ static inline void buffer_get(struct buffer *buf, word_t *data)
  *============================================================================*/
 
 /**
+ * @brief Dump execution statistics.
+ *
+ * @param it      Benchmark iteration.
+ * @param type    Task type.
+ * @param nobjs   Number of objects.
+ * @param objsize Object size.
+ * @param stats   Execution statistics.
+ */
+static inline void benchmark_dump_stats(int it, const char *type, int nobjs, size_t objsize, uint64_t *stats)
+{
+	printf("%s %d %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][buffer]",
+		it,
+		type,
+		NTHREADS,
+		nobjs,
+		objsize,
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6]),
+		UINT32(stats[7]),
+		UINT32(stats[8]),
+		UINT32(stats[9]),
+		UINT32(stats[10]),
+		UINT32(stats[11]),
+		UINT32(stats[12]),
+		UINT32(stats[13]),
+		UINT32(stats[14])
+	);
+}
+
+/*============================================================================*
+ * producer()                                                                 *
+ *============================================================================*/
+
+/**
  * @brief Places objects in a shared buffer.
  */
 static void *producer(void *arg)
 {
-	uint64_t t0, t1;
+	uint64_t t0, t1, tmp;
 	struct tdata *t = arg;
 	struct buffer *buf = t->buf;
+	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
 
 	memfill(t->data, (word_t) -1, OBJSIZE/WORD_SIZE);
 
-	perf_start(0, PERF_DCACHE_STALLS);
-	perf_start(1, PERF_ICACHE_STALLS);
+	perf_start(0, perf_events[perf]);
 	t0 = stopwatch_read();
 
 		do
@@ -162,32 +235,17 @@ static void *producer(void *arg)
 
 		} while (--t->n > 0);
 
+
 	t1 = stopwatch_read();
-	perf_stop(1);
 	perf_stop(0);
 
+	tmp = stopwatch_diff(t0, t1);
+	if (tmp < stats[0])
+		stats[0] = tmp;
+	stats[perf + 1] = perf_read(0);
+
 	if (iteration >= SKIP)
-	{
-		printf("%s %d %s %s %d %s %d %s %d %s %d %s %d %s %d %s %d",
-			"[benchmarks][buffer]",
-			iteration - SKIP,
-			"p",
-			"nthreads",
-			NTHREADS,
-			"tnum",
-			t->tnum,
-			"nobjects",
-			NOBJECTS,
-			"objsize",
-			OBJSIZE,
-			"cycles",
-			UINT32(stopwatch_diff(t0, t1)),
-			"d-stalls",
-			UINT32(perf_read(0)),
-			"i-stalls",
-			UINT32(perf_read(1))
-		);
-	}
+		benchmark_dump_stats(iteration - SKIP, "p", NOBJECTS, OBJSIZE, stats);
 
 	return (NULL);
 }
@@ -201,14 +259,14 @@ static void *producer(void *arg)
  */
 static void *consumer(void *arg)
 {
-	uint64_t t0, t1;
+	uint64_t t0, t1, tmp;
 	struct tdata *t = arg;
 	struct buffer *buf = t->buf;
+	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
 
 	memfill(t->data, 0, OBJSIZE/WORD_SIZE);
 
-	perf_start(0, PERF_DCACHE_STALLS);
-	perf_start(1, PERF_ICACHE_STALLS);
+	perf_start(0, perf_events[perf]);
 	t0 = stopwatch_read();
 
 		do
@@ -223,31 +281,15 @@ static void *consumer(void *arg)
 		} while (--t->n > 0);
 
 	t1 = stopwatch_read();
-	perf_stop(1);
 	perf_stop(0);
 
+	tmp = stopwatch_diff(t0, t1);
+	if (tmp < stats[0])
+		stats[0] = tmp;
+	stats[perf + 1] = perf_read(0);
+
 	if (iteration >= SKIP)
-	{
-		printf("%s %d %s %s %d %s %d %s %d %s %d %s %d %s %d %s %d",
-			"[benchmarks][buffer]",
-			iteration - SKIP,
-			"c",
-			"nthreads",
-			NTHREADS,
-			"tnum",
-			t->tnum,
-			"nobjects",
-			NOBJECTS,
-			"objsize",
-			OBJSIZE,
-			"cycles",
-			UINT32(stopwatch_diff(t0, t1)),
-			"d-stalls",
-			UINT32(perf_read(0)),
-			"i-stalls",
-			UINT32(perf_read(1))
-		);
-	}
+		benchmark_dump_stats(iteration - SKIP, "c", NOBJECTS, OBJSIZE, stats);
 
 	return (NULL);
 }
@@ -260,35 +302,40 @@ static void *consumer(void *arg)
  * @brief Buffer Benchmark Kernel
  *
  * @param nthreads Number of working threads.
+ * @param objsize  Object size.
  */
-static void kernel_buffer(int nthreads)
+static void kernel_buffer(int nthreads, size_t objsize)
 {
 	kthread_t tid[NTHREADS_MAX];
 
 	/* Save kernel parameters. */
 	NTHREADS = nthreads;
+	OBJSIZE = objsize;
 
 	/* Spawn threads. */
 	for (iteration = 0; iteration < (NITERATIONS + SKIP); iteration++)
 	{
-		for (int i = 0; i < nthreads; i += 2)
+		for (perf = 0; perf < BENCHMARK_PERF_EVENTS; perf++)
 		{
-			struct buffer *buf;
+			for (int i = 0; i < nthreads; i += 2)
+			{
+				struct buffer *buf;
 
-			buffer_init(buf = &buffers[i/2], BUFLEN);
+				buffer_init(buf = &buffers[i/2], BUFLEN);
 
-			tdata[i].tnum = i;
-			tdata[i + 1].tnum = i + 1;
-			tdata[i].n = tdata[i + 1].n = NOBJECTS;
-			tdata[i].buf = tdata[i + 1].buf = buf;
+				tdata[i].tnum = i;
+				tdata[i + 1].tnum = i + 1;
+				tdata[i].n = tdata[i + 1].n = NOBJECTS;
+				tdata[i].buf = tdata[i + 1].buf = buf;
 
-			kthread_create(&tid[i], producer, &tdata[i]);
-			kthread_create(&tid[i + 1], consumer, &tdata[i + 1]);
+				kthread_create(&tid[i], producer, &tdata[i]);
+				kthread_create(&tid[i + 1], consumer, &tdata[i + 1]);
+			}
+
+			/* Wait for threads. */
+			for (int i = 0; i < nthreads; i++)
+				kthread_join(tid[i], NULL);
 		}
-
-		/* Wait for threads. */
-		for (int i = 0; i < nthreads; i++)
-			kthread_join(tid[i], NULL);
 	}
 }
 
@@ -304,7 +351,10 @@ void benchmark_buffer(void)
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_buffer(nthreads);
+	{
+		for (size_t objsize = OBJSIZE_MIN; objsize <= OBJSIZE_MAX; objsize += OBJSIZE_STEP)
+			kernel_buffer(nthreads, objsize);
+	}
 
 #endif
 }
