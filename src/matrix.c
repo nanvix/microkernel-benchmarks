@@ -29,6 +29,11 @@
 #ifdef __benchmark_matrix__
 
 /**
+ * @brief Number of events to profile.
+ */
+#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+
+/**
  * @name Benchmark Parameters
  */
 /**@{*/
@@ -37,6 +42,26 @@
 #define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
 #define MATSIZE                    84  /**< Matrix Size                            */
 /**@}*/
+
+/**
+ * Performance events.
+ */
+static int perf_events[BENCHMARK_PERF_EVENTS] = {
+	PERF_CYCLES,
+	PERF_ICACHE_HITS,
+	PERF_ICACHE_MISSES,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_HITS,
+	PERF_DCACHE_MISSES,
+	PERF_DCACHE_STALLS,
+	PERF_BUNDLES,
+	PERF_BRANCH_TAKEN,
+	PERF_BRANCH_STALLS,
+	PERF_REG_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_DTLB_STALLS,
+	PERF_STREAM_STALLS
+};
 
 /**
  * @name Benchmark Kernel Parameters
@@ -63,6 +88,38 @@ static float a[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
 static float b[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
 static float ret[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
 /**@}*/
+
+/**
+ * @brief Dump execution statistics.
+ *
+ * @param it      Benchmark iteration.
+ * @param matsize Matrix size.
+ * @param stats   Execution statistics.
+ */
+static inline void benchmark_dump_stats(int it, size_t matsize, uint64_t *stats)
+{
+	printf("%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][matrix]",
+		it,
+		NTHREADS,
+		matsize,
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6]),
+		UINT32(stats[7]),
+		UINT32(stats[8]),
+		UINT32(stats[9]),
+		UINT32(stats[10]),
+		UINT32(stats[11]),
+		UINT32(stats[12]),
+		UINT32(stats[13]),
+		UINT32(stats[14])
+	);
+}
 
 /**
  * @brief Initializes a chunk of the matrix.
@@ -119,41 +176,33 @@ static void *task(void *arg)
 	struct tdata *t = arg;
 	int i0 = t->i0;
 	int in = t->in;
-	uint64_t t0, t1;
+	uint64_t t0, t1, tmp;
+	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
+
+	stats[0] = UINT64_MAX;
 
 	for (int i = 0; i < (NITERATIONS + SKIP); i++)
 	{
-		matrix_init(i0, in);
+		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
+		{
+			matrix_init(i0, in);
 
-		perf_start(0, PERF_DCACHE_STALLS);
-		perf_start(1, PERF_ICACHE_STALLS);
-		t0 = stopwatch_read();
+			t0 = stopwatch_read();
+			perf_start(0, perf_events[j]);
 
-			matrix_mult(i0, in);
+				matrix_mult(i0, in);
 
-		t1 = stopwatch_read();
-		perf_stop(1);
-		perf_stop(0);
+			perf_stop(0);
+			t1 = stopwatch_read();
+
+			tmp = stopwatch_diff(t0, t1);
+			if (tmp < stats[0])
+				stats[0] = tmp;
+			stats[j + 1] = perf_read(0);
+		}
 
 		if (i >= SKIP)
-		{
-			printf("%s %d %s %d %s %d %s %d %s %d %s %d %s %d",
-				"[benchmarks][matrix]",
-				i - SKIP,
-				"nthreads",
-				NTHREADS,
-				"tnum",
-				t->tnum,
-				"matsize",
-				MATSIZE,
-				"cycles",
-				UINT32(stopwatch_diff(t0, t1)),
-				"d-stalls",
-				UINT32(perf_read(0)),
-				"i-stalls",
-				UINT32(perf_read(1))
-			);
-		}
+			benchmark_dump_stats(i - SKIP, MATSIZE, stats);
 	}
 
 	return (NULL);
