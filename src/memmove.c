@@ -36,10 +36,12 @@
  * @name Benchmark Parameters
  */
 /**@{*/
-#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
+#define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
-#define OBJSIZE              (64*1024) /**< Object Size                            */
+#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
+#define OBJSIZE_MIN           (1*1024) /**< Minimum Object Size                    */
+#define OBJSIZE_MAX          (64*1024) /**< Maxiimum Object Size                   */
+#define OBJSIZE_STEP          (1*1024) /**< Object Size                            */
 /**@}*/
 
 /**
@@ -66,7 +68,8 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
-static int NTHREADS; /**< Number of Working Threads */
+static int NTHREADS;   /**< Number of Working Threads */
+static size_t OBJSIZE; /**< Object Size               */
 /**@}*/
 
 /**
@@ -75,16 +78,16 @@ static int NTHREADS; /**< Number of Working Threads */
 struct tdata
 {
 	int tnum;  /**< Thread Number */
-	int start; /**< Start Byte    */
-	int end;   /**< End Byte      */
+	size_t start; /**< Start Byte    */
+	size_t end;   /**< End Byte      */
 } tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
 
 /**
  * @brief Buffers.
  */
 /**@{*/
-static word_t obj1[OBJSIZE/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
-static word_t obj2[OBJSIZE/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
+static word_t obj1[OBJSIZE_MAX/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
+static word_t obj2[OBJSIZE_MAX/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
 /**@}*/
 
 /**
@@ -166,13 +169,14 @@ static void *task(void *arg)
  *
  * @param nthreads Number of working threads.
  */
-static void kernel_memmove(int nthreads)
+static void kernel_memmove(int nthreads, size_t objsize)
 {
-	int nbytes;
+	size_t nbytes;
 	kthread_t tid[NTHREADS_MAX];
 
 	/* Save kernel parameters. */
 	NTHREADS = nthreads;
+	OBJSIZE = objsize;
 
 	nbytes = (OBJSIZE/WORD_SIZE)/nthreads;
 
@@ -199,12 +203,15 @@ void benchmark_memmove(void)
 {
 #ifndef NDEBUG
 
-	kernel_memmove(1);
+	kernel_memmove(1, OBJSIZE_MAX);
 
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_memmove(nthreads);
+	{
+		for (size_t objsize = OBJSIZE_MIN; objsize <= OBJSIZE_MAX; objsize += OBJSIZE_STEP)
+			kernel_memmove(nthreads, objsize);
+	}
 
 #endif
 }
