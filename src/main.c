@@ -68,6 +68,10 @@ int main(int argc, const char *argv[])
 	benchmark_fork_join();
 #endif
 
+#ifdef __benchmark_upcall__
+	benchmark_upcall();
+#endif
+
 	kprintf("--------------------------------------------------------------------------------");
 
 	/* Shutdown. */
