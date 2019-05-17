@@ -40,7 +40,7 @@
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
 #define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
 #define OBJSIZE_MIN           (1*1024) /**< Minimum Object Size                    */
-#define OBJSIZE_MAX          (64*1024) /**< Maxiimum Object Size                   */
+#define OBJSIZE_MAX          (64*1024) /**< Maximum Object Size                    */
 #define OBJSIZE_STEP          (1*1024) /**< Object Size                            */
 /**@}*/
 
@@ -158,7 +158,7 @@ static void *task(void *arg)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, (end - start)*WORD_SIZE, stats);
+			benchmark_dump_stats(i - SKIP, OBJSIZE, stats);
 	}
 
 	return (NULL);
@@ -168,6 +168,7 @@ static void *task(void *arg)
  * @brief Memory Move Benchmark Kernel
  *
  * @param nthreads Number of working threads.
+ * @param objsize  Object size.
  */
 static void kernel_memmove(int nthreads, size_t objsize)
 {
