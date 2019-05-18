@@ -30,11 +30,6 @@
 #ifdef __benchmark_buffer__
 
 /**
- * @brief Number of events to profile.
- */
-#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
-
-/**
  * @name Benchmark Parameters
  */
 /**@{*/
@@ -49,26 +44,6 @@
 /**@}*/
 
 /**
- * Performance events.
- */
-static int perf_events[BENCHMARK_PERF_EVENTS] = {
-	PERF_CYCLES,
-	PERF_ICACHE_HITS,
-	PERF_ICACHE_MISSES,
-	PERF_ICACHE_STALLS,
-	PERF_DCACHE_HITS,
-	PERF_DCACHE_MISSES,
-	PERF_DCACHE_STALLS,
-	PERF_BUNDLES,
-	PERF_BRANCH_TAKEN,
-	PERF_BRANCH_STALLS,
-	PERF_REG_STALLS,
-	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS,
-	PERF_STREAM_STALLS
-};
-
-/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -80,11 +55,6 @@ static size_t OBJSIZE; /**< Object Size               */
  * @brief Current benchmark iteration.
  */
 static int iteration = 0;
-
-/**
- * @brief Current performance event being monitored.
- */
-static int perf = 0;
 
 /**
  * @brief Buffer.
@@ -179,7 +149,7 @@ static inline void buffer_get(struct buffer *buf, word_t *data)
  */
 static inline void benchmark_dump_stats(int it, const char *type, int nobjs, size_t objsize, uint64_t *stats)
 {
-	printf("%s %d %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+	printf("%s %d %s %d %d %d %d %d",
 		"[benchmarks][buffer]",
 		it,
 		type,
@@ -187,20 +157,7 @@ static inline void benchmark_dump_stats(int it, const char *type, int nobjs, siz
 		nobjs,
 		objsize,
 		UINT32(stats[0]),
-		UINT32(stats[1]),
-		UINT32(stats[2]),
-		UINT32(stats[3]),
-		UINT32(stats[4]),
-		UINT32(stats[5]),
-		UINT32(stats[6]),
-		UINT32(stats[7]),
-		UINT32(stats[8]),
-		UINT32(stats[9]),
-		UINT32(stats[10]),
-		UINT32(stats[11]),
-		UINT32(stats[12]),
-		UINT32(stats[13]),
-		UINT32(stats[14])
+		UINT32(stats[1])
 	);
 }
 
@@ -216,11 +173,12 @@ static void *producer(void *arg)
 	uint64_t t0, t1, tmp;
 	struct tdata *t = arg;
 	struct buffer *buf = t->buf;
-	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
+	uint64_t stats[2];
 
+	stats[0] = UINT64_MAX;
 	memfill(t->data, (word_t) -1, OBJSIZE/WORD_SIZE);
 
-	perf_start(0, perf_events[perf]);
+	perf_start(0, PERF_CYCLES);
 	t0 = stopwatch_read();
 
 		do
@@ -242,7 +200,7 @@ static void *producer(void *arg)
 	tmp = stopwatch_diff(t0, t1);
 	if (tmp < stats[0])
 		stats[0] = tmp;
-	stats[perf + 1] = perf_read(0);
+	stats[1] = perf_read(0);
 
 	if (iteration >= SKIP)
 		benchmark_dump_stats(iteration - SKIP, "p", NOBJECTS, OBJSIZE, stats);
@@ -262,11 +220,12 @@ static void *consumer(void *arg)
 	uint64_t t0, t1, tmp;
 	struct tdata *t = arg;
 	struct buffer *buf = t->buf;
-	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
+	uint64_t stats[2];
 
+	stats[0] = UINT64_MAX;
 	memfill(t->data, 0, OBJSIZE/WORD_SIZE);
 
-	perf_start(0, perf_events[perf]);
+	perf_start(0, PERF_CYCLES);
 	t0 = stopwatch_read();
 
 		do
@@ -286,7 +245,7 @@ static void *consumer(void *arg)
 	tmp = stopwatch_diff(t0, t1);
 	if (tmp < stats[0])
 		stats[0] = tmp;
-	stats[perf + 1] = perf_read(0);
+	stats[1] = perf_read(0);
 
 	if (iteration >= SKIP)
 		benchmark_dump_stats(iteration - SKIP, "c", NOBJECTS, OBJSIZE, stats);
@@ -315,27 +274,24 @@ static void kernel_buffer(int nthreads, size_t objsize)
 	/* Spawn threads. */
 	for (iteration = 0; iteration < (NITERATIONS + SKIP); iteration++)
 	{
-		for (perf = 0; perf < BENCHMARK_PERF_EVENTS; perf++)
+		for (int i = 0; i < nthreads; i += 2)
 		{
-			for (int i = 0; i < nthreads; i += 2)
-			{
-				struct buffer *buf;
+			struct buffer *buf;
 
-				buffer_init(buf = &buffers[i/2], BUFLEN);
+			buffer_init(buf = &buffers[i/2], BUFLEN);
 
-				tdata[i].tnum = i;
-				tdata[i + 1].tnum = i + 1;
-				tdata[i].n = tdata[i + 1].n = NOBJECTS;
-				tdata[i].buf = tdata[i + 1].buf = buf;
+			tdata[i].tnum = i;
+			tdata[i + 1].tnum = i + 1;
+			tdata[i].n = tdata[i + 1].n = NOBJECTS;
+			tdata[i].buf = tdata[i + 1].buf = buf;
 
-				kthread_create(&tid[i], producer, &tdata[i]);
-				kthread_create(&tid[i + 1], consumer, &tdata[i + 1]);
-			}
-
-			/* Wait for threads. */
-			for (int i = 0; i < nthreads; i++)
-				kthread_join(tid[i], NULL);
+			kthread_create(&tid[i], producer, &tdata[i]);
+			kthread_create(&tid[i + 1], consumer, &tdata[i + 1]);
 		}
+
+		/* Wait for threads. */
+		for (int i = 0; i < nthreads; i++)
+			kthread_join(tid[i], NULL);
 	}
 }
 
