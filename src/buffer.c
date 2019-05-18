@@ -35,11 +35,11 @@
 /**@{*/
 #define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
-#define OBJSIZE_MIN           (2*1024) /**< Minimum Object Size                    */
-#define OBJSIZE_MAX          (32*1024) /**< Maximum Object Size                    */
-#define OBJSIZE_STEP          (2*1024) /**< Object Size                            */
-#define BUFLEN                      4  /**< Buffer Length                          */
+#define NTHREADS_STEP               4  /**< Increment on Number of Working Threads */
+#define OBJSIZE_MIN           (1*1024) /**< Minimum Object Size                    */
+#define OBJSIZE_MAX           (8*1024) /**< Maximum Object Size                    */
+#define OBJSIZE_STEP          (1*1024) /**< Object Size                            */
+#define BUFLEN                     16  /**< Buffer Length                          */
 #define NOBJECTS                   32  /**< Number of Objects                      */
 /**@}*/
 
