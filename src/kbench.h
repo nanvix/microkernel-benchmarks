@@ -137,6 +137,7 @@
 	extern void benchmark_buffer(void);
 	extern void benchmark_memmove(void);
 	extern void benchmark_fork_join(void);
+	extern void benchmark_upcall(void);
 	/**@}*/
 
 #endif /* _KBENCH_H_ */
