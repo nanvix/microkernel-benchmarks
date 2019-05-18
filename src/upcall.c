@@ -31,31 +31,24 @@
 /**
  * @briel Benchmark timestamps
  */
-uint64_t t0, t1, perf_value;
+static uint64_t t0, t1, perf_value;
 
 /**
  * @brief Number of events to profile.
  */
-#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+#define BENCHMARK_PERF_EVENTS 7
 
 /**
  * Performance events.
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_CYCLES,
-	PERF_ICACHE_HITS,
-	PERF_ICACHE_MISSES,
 	PERF_ICACHE_STALLS,
-	PERF_DCACHE_HITS,
-	PERF_DCACHE_MISSES,
 	PERF_DCACHE_STALLS,
-	PERF_BUNDLES,
-	PERF_BRANCH_TAKEN,
 	PERF_BRANCH_STALLS,
 	PERF_REG_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS,
-	PERF_STREAM_STALLS
+	PERF_DTLB_STALLS
 };
 
 /**
@@ -64,27 +57,19 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @param it    Benchmark iteration.
  * @param stats Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *upcall_stats)
+static inline void benchmark_dump_stats(int it, uint64_t *stats)
 {
-	printf("%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+	printf("%s %d %d %d %d %d %d %d %d %d",
 		"[benchmarks][upcall]",
 		it,
-		UINT32(upcall_stats[0]),
-		UINT32(upcall_stats[1]),
-		UINT32(upcall_stats[2]),
-		UINT32(upcall_stats[3]),
-		UINT32(upcall_stats[4]),
-		UINT32(upcall_stats[5]),
-		UINT32(upcall_stats[6]),
-		UINT32(upcall_stats[7]),
-		UINT32(upcall_stats[8]),
-		UINT32(upcall_stats[9]),
-		UINT32(upcall_stats[10]),
-		UINT32(upcall_stats[11]),
-		UINT32(upcall_stats[12]),
-		UINT32(upcall_stats[13]),
-		UINT32(upcall_stats[13]),
-		UINT32(upcall_stats[14])
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6]),
+		UINT32(stats[7])
 	);
 }
 
