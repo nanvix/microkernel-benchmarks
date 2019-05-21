@@ -30,7 +30,7 @@
 /**
  * @brief Number of events to profile.
  */
-#define BENCHMARK_PERF_EVENTS PERF_EVENTS_MAX
+#define BENCHMARK_PERF_EVENTS 7
 
 /**
  * @name Benchmark Parameters
@@ -38,9 +38,9 @@
 /**@{*/
 #define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
+#define NTHREADS_STEP               4  /**< Increment on Number of Working Threads */
 #define OBJSIZE_MIN           (1*1024) /**< Minimum Object Size                    */
-#define OBJSIZE_MAX          (64*1024) /**< Maximum Object Size                    */
+#define OBJSIZE_MAX           (8*1024) /**< Maximum Object Size                    */
 #define OBJSIZE_STEP          (1*1024) /**< Object Size                            */
 /**@}*/
 
@@ -49,19 +49,12 @@
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_CYCLES,
-	PERF_ICACHE_HITS,
-	PERF_ICACHE_MISSES,
 	PERF_ICACHE_STALLS,
-	PERF_DCACHE_HITS,
-	PERF_DCACHE_MISSES,
 	PERF_DCACHE_STALLS,
-	PERF_BUNDLES,
-	PERF_BRANCH_TAKEN,
 	PERF_BRANCH_STALLS,
 	PERF_REG_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS,
-	PERF_STREAM_STALLS
+	PERF_DTLB_STALLS
 };
 
 /**
@@ -99,7 +92,7 @@ static word_t obj2[OBJSIZE_MAX/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
  */
 static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
 {
-	printf("%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+	printf("%s %d %d %d %d %d %d %d %d %d %d %d",
 		"[benchmarks][memmove]",
 		it,
 		NTHREADS,
@@ -111,14 +104,7 @@ static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
 		UINT32(stats[4]),
 		UINT32(stats[5]),
 		UINT32(stats[6]),
-		UINT32(stats[7]),
-		UINT32(stats[8]),
-		UINT32(stats[9]),
-		UINT32(stats[10]),
-		UINT32(stats[11]),
-		UINT32(stats[12]),
-		UINT32(stats[13]),
-		UINT32(stats[13])
+		UINT32(stats[7])
 	);
 }
 
