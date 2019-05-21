@@ -87,9 +87,6 @@ static void handler(void *arg)
 	t1 = stopwatch_read();
 	perf_value = perf_read(0);
 
-	/* Save. */
-	dcache_invalidate();
-
 	/* Exit. */
 	kthread_exit(arg);
 }
@@ -146,8 +143,6 @@ void benchmark_upcall(void)
 
 			/* Wait for the thread. */
 			kthread_join(tid, NULL);
-
-			dcache_invalidate();
 
 			/* Saves measurements. */
 			tmp = stopwatch_diff(t0, t1);
