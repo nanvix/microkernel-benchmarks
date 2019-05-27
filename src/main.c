@@ -72,6 +72,10 @@ int main(int argc, const char *argv[])
 	benchmark_upcall();
 #endif
 
+#ifdef __benchmark_gauss__
+	benchmark_gauss();
+#endif
+
 	kprintf("--------------------------------------------------------------------------------");
 
 	/* Shutdown. */
