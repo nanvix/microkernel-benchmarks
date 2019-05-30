@@ -22,36 +22,9 @@
 # SOFTWARE.
 #
 
-#===============================================================================
-# Target Configuration
-#===============================================================================
+ifeq ($(RELEASE), true)
 
-export CFLAGS  = -D __optimsoc__     # Target
-export CFLAGS += -D __optimsoc4__    # Processor
-export CFLAGS += -D __or1k_cluster__ # CLuster
-export CFLAGS += -D __or1k__         # Core
-export CFLAGS += -D __mor1kx__       # Core Variant
+	# Switch to Level 3 Optimizations
+	export CFLAGS += -O3
 
-#===============================================================================
-# Toolchain Configuration
-#===============================================================================
-
-# Toolchain Directory
-export TOOLCHAIN_DIR ?= $(UTILSDIR)/toolchain/or1k/bin/
-
-# Toolchain
-export CC = $(TOOLCHAIN_DIR)/or1k-elf-gcc
-export LD = $(TOOLCHAIN_DIR)/or1k-elf-ld
-export AR = $(TOOLCHAIN_DIR)/or1k-elf-ar
-
-# Compiler Options
-export CFLAGS  += -Wstack-usage=4096
-export CFLAGS  += -nostdlib -nostdinc
-export CFLAGS += -Wno-error=type-limits
-export CFLAGS += -I $(INCDIR)/posix
-
-# Linker Options
-export LDFLAGS  += -nostdlib -nostdinc
-
-# Suffix for Objects
-export OBJ_SUFFIX=optimsoc
+endif

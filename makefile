@@ -30,10 +30,7 @@
 export VERBOSE ?= no
 
 # Release Version?
-export RELEASE ?= no
-
-# Benchmark Kernel
-export KERNEL ?= perf
+export RELEASE ?= false
 
 #===============================================================================
 # Directories
@@ -47,6 +44,7 @@ export CONTRIBDIR := $(ROOTDIR)/contrib
 export LINKERDIR  := $(BUILDDIR)/$(TARGET)/linker
 export MAKEDIR    := $(BUILDDIR)/$(TARGET)/make
 export DOCDIR     := $(ROOTDIR)/doc
+export IMGDIR     := $(ROOTDIR)/img
 export INCDIR     := $(ROOTDIR)/include
 export LIBDIR     := $(ROOTDIR)/lib
 export SRCDIR     := $(ROOTDIR)/src
@@ -60,12 +58,6 @@ export UTILSDIR   := $(ROOTDIR)/utils
 export LIBHAL    = $(LIBDIR)/libhal-$(TARGET).a
 export LIBKERNEL = $(LIBDIR)/libkernel-$(TARGET).a
 export LIBNANVIX = $(LIBDIR)/libnanvix-$(TARGET).a
-
-# Binary
-export ELFBIN := ukernel-benchmarks
-
-# Image
-export IMAGE := ukernel-$(KERNEL).img
 
 #===============================================================================
 # Target-Specific Make Rules
@@ -88,8 +80,6 @@ export CFLAGS += -fno-stack-protector
 export CFLAGS += -Wvla # -Wredundant-decls
 export CFLAGS += -I $(INCDIR)
 
-export CFLAGS += -D__benchmark_$(subst -,_,$(KERNEL))__
-
 # Additional C Flags
 include $(BUILDDIR)/makefile.cflags
 
@@ -99,17 +89,18 @@ export ARFLAGS = rc
 #===============================================================================
 
 # Builds Everything
-all: image-$(IMAGE)
+all: images
 
 # Make Directories
 make-dirs:
 	@mkdir -p $(INCDIR)
+	@mkdir -p $(IMGDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(LIBDIR)
 
-# Build Binary Image
-image-$(IMAGE): | make-dirs all-target
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(ELFBIN)
+# Build Binary Images
+images: | make-dirs all-target
+	@$(MAKE) -C $(SRCDIR) images
 
 # Cleans builds.
 clean: clean-target

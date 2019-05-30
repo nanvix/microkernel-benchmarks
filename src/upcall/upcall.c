@@ -24,9 +24,7 @@
 
 #include <nanvix.h>
 #include <stdint.h>
-#include "kbench.h"
-
-#ifdef __benchmark_upcall__
+#include <kbench.h>
 
 /**
  * @briel Benchmark timestamps
@@ -159,5 +157,3 @@ void benchmark_upcall(void)
 	sigact.handler = NULL;
 	KASSERT(ksigclt(SIGPGFAULT, &sigact) == 0);
 }
-
-#endif /* __benchmark_upcall__ */

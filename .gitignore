@@ -18,5 +18,12 @@ lib/
 # Ctags
 tags
 
-# Microkernel Headers
-include/
+# HAL Headers
+include/arch/
+include/grub/
+include/machine/
+include/nanvix/cc.h
+include/nanvix/const.h
+include/nanvix/hal/
+include/nanvix/klib.h
+include/posix

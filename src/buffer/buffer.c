@@ -25,9 +25,7 @@
 #include <sys/types.h>
 #include <nanvix.h>
 #include <stdint.h>
-#include "kbench.h"
-
-#ifdef __benchmark_buffer__
+#include <kbench.h>
 
 /**
  * @name Benchmark Parameters
@@ -302,7 +300,7 @@ void benchmark_buffer(void)
 {
 #ifndef NDEBUG
 
-	kernel_buffer(2);
+	kernel_buffer(NTHREADS_MIN, OBJSIZE_MAX);
 
 #else
 
@@ -314,6 +312,3 @@ void benchmark_buffer(void)
 
 #endif
 }
-
-#endif /* __benchmark_buffer__ */
-
