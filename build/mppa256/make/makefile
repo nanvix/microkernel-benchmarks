@@ -62,7 +62,7 @@ export THEIR_LIBS = -lvbsp -lmppanoc -lmpparouting -mhypervisor
 all-target: all-k1bio all-k1bdp
 
 # Builds everything for node cluster variant.
-all-k1bdp: clean-target
+all-k1bdp:
 	@$(MAKE) -C $(SRCDIR) all                          \
 		CFLAGS="$(CFLAGS) -D __k1bdp__ -mcluster=node" \
 		LDFLAGS="$(LDFLAGS) -mcluster=node"            \
@@ -70,11 +70,10 @@ all-k1bdp: clean-target
 		LIBHAL=$(LIBDIR)/libhal-k1b-node.a             \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a       \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a       \
-		OBJ_SUFFIX=mppa256-k1bdp                       \
-		ELFBIN=ukernel-benchmarks-k1bdp
+		OBJ_SUFFIX=k1bdp
 
 # Builds everything for node ioddr variant.
-all-k1bio: clean-target
+all-k1bio:
 	@$(MAKE) -C $(SRCDIR) all                           \
 		CFLAGS="$(CFLAGS) -D __k1bio__ -mcluster=ioddr" \
 		LDFLAGS="$(LDFLAGS) -mcluster=ioddr"            \
@@ -82,13 +81,20 @@ all-k1bio: clean-target
 		LIBHAL=$(LIBDIR)/libhal-k1b-ioddr.a             \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a       \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a       \
-		EXEC=$(BINDIR)/ukernel-benchmarks-k1bio         \
-		OBJ_SUFFIX=mppa256-k1bio                        \
-		ELFBIN=ukernel-benchmarks-k1bio
+		OBJ_SUFFIX=k1bio
 
 # Cleans object files.
-clean-target:
-	@$(MAKE) -C $(SRCDIR) clean
+clean-target: clean-k1bio clean-k1bdp
+
+# Cleans object files for node cluster variant.
+clean-k1bdp:
+	@$(MAKE) -C $(SRCDIR) clean \
+		OBJ_SUFFIX=k1bdp
+
+# Cleans object files for node ioddr variant.
+clean-k1bio:
+	@$(MAKE) -C $(SRCDIR) clean \
+		OBJ_SUFFIX=k1bio
 
 # Cleans everything.
 distclean-target: distclean-k1bdp distclean-k1bio
@@ -98,13 +104,11 @@ distclean-k1bdp: clean-target
 	@$(MAKE) -C $(SRCDIR) distclean              \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a \
-		OBJ_SUFFIX=mppa256-k1bdp                 \
-		ELFBIN=ukernel-benchmarks-k1bdp
+		OBJ_SUFFIX=k1bdp
 
 # Cleans everything for node ioddr variant.
 distclean-k1bio: clean-target
 	@$(MAKE) -C $(SRCDIR) distclean               \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a \
-		OBJ_SUFFIX=mppa256-k1bio                  \
-		ELFBIN=ukernel-benchmarks-k1bio
+		OBJ_SUFFIX=k1bio

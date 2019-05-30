@@ -22,6 +22,15 @@
 # SOFTWARE.
 #
 
+# Default Benchmark Kernel
+export KERNEL ?= perf
+
+# ELF Binary
+ELFBIN := $(KERNEL)
+
+# Image Binary
+export IMAGE := $(IMGDIR)/$(KERNEL).img
+
 # Runs Unit Tests in IO Cluster.
 run-iocluster:
 	bash $(UTILSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(ELFBIN) $(TARGET) iocluster --no-debug

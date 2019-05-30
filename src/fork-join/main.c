@@ -23,7 +23,7 @@
  */
 
 #include <nanvix.h>
-#include "kbench.h"
+#include <kbench.h>
 
 /**
  * @brief Lunches user-land testing units.
@@ -40,45 +40,7 @@ int main(int argc, const char *argv[])
 
 	kprintf("--------------------------------------------------------------------------------");
 
-#ifdef __benchmark_perf__
-	benchmark_perf();
-#endif
-
-#ifdef __benchmark_kcall_local__
-	benchmark_kcall_local();
-#endif
-
-#ifdef __benchmark_kcall_remote__
-	benchmark_kcall_remote();
-#endif
-
-#ifdef __benchmark_matrix__
-	benchmark_matrix();
-#endif
-
-#ifdef __benchmark_memmove__
-	benchmark_memmove();
-#endif
-
-#ifdef __benchmark_buffer__
-	benchmark_buffer();
-#endif
-
-#ifdef __benchmark_fork_join__
 	benchmark_fork_join();
-#endif
-
-#ifdef __benchmark_upcall__
-	benchmark_upcall();
-#endif
-
-#ifdef __benchmark_gauss__
-	benchmark_gauss();
-#endif
-
-#ifdef __benchmark_tsp__
-	benchmark_tsp();
-#endif
 
 	kprintf("--------------------------------------------------------------------------------");
 

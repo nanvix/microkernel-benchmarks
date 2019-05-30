@@ -24,9 +24,7 @@
 
 #include <nanvix.h>
 #include <stdint.h>
-#include "kbench.h"
-
-#ifdef __benchmark_gauss__
+#include <kbench.h>
 
 /**
  * @name Math Costants
@@ -150,7 +148,7 @@ static double powerd(double x, int y)
 static inline void benchmark_dump_stats(int it, size_t imgsize, int masksize, uint64_t *stats)
 {
 	printf("%s %d %d %d %d %d %d %d %d %d %d %d %d",
-		"[benchmarks][gauss]",
+		"[benchmarks][gf]",
 		it,
 		NTHREADS,
 		imgsize,
@@ -313,5 +311,3 @@ void benchmark_gauss(void)
 
 #endif
 }
-
-#endif /* __benchmark_gauss__ */

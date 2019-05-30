@@ -23,9 +23,8 @@
  */
 
 #include <nanvix.h>
-#include "kbench.h"
-
-#ifdef __benchmark_memmove__
+#include <stdint.h>
+#include <kbench.h>
 
 /**
  * @brief Number of events to profile.
@@ -38,10 +37,8 @@
 /**@{*/
 #define NTHREADS_MIN                2  /**< Minimum Number of Working Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               4  /**< Increment on Number of Working Threads */
-#define OBJSIZE_MIN           (1*1024) /**< Minimum Object Size                    */
-#define OBJSIZE_MAX           (8*1024) /**< Maximum Object Size                    */
-#define OBJSIZE_STEP          (1*1024) /**< Object Size                            */
+#define NTHREADS_STEP               2  /**< Increment on Number of Working Threads */
+#define MATSIZE                    84  /**< Matrix Size                            */
 /**@}*/
 
 /**
@@ -61,42 +58,42 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
-static int NTHREADS;   /**< Number of Working Threads */
-static size_t OBJSIZE; /**< Object Size               */
+static int NTHREADS; /**< Number of Working Threads */
 /**@}*/
 
 /**
- * @brief Thread info.
+ * @brief Task info.
  */
 struct tdata
 {
-	int tnum;  /**< Thread Number */
-	size_t start; /**< Start Byte    */
-	size_t end;   /**< End Byte      */
+	int tnum; /**< Thread Number */
+	int i0;   /**< Start Line    */
+	int in;   /**< End Line      */
 } tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
 
 /**
- * @brief Buffers.
+ * @brief Matrices.
  */
 /**@{*/
-static word_t obj1[OBJSIZE_MAX/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
-static word_t obj2[OBJSIZE_MAX/WORD_SIZE] ALIGN(CACHE_LINE_SIZE);
+static float a[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
+static float b[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
+static float ret[MATSIZE*MATSIZE] ALIGN(CACHE_LINE_SIZE);
 /**@}*/
 
 /**
  * @brief Dump execution statistics.
  *
  * @param it      Benchmark iteration.
- * @param objsize Object size.
+ * @param matsize Matrix size.
  * @param stats   Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
+static inline void benchmark_dump_stats(int it, size_t matsize, uint64_t *stats)
 {
 	printf("%s %d %d %d %d %d %d %d %d %d %d %d",
-		"[benchmarks][memmove]",
+		"[benchmarks][mm]",
 		it,
 		NTHREADS,
-		objsize,
+		matsize,
 		UINT32(stats[0]),
 		UINT32(stats[1]),
 		UINT32(stats[2]),
@@ -109,30 +106,75 @@ static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
 }
 
 /**
- * @brief Move Bytes in Memory
+ * @brief Initializes a chunk of the matrix.
+ *
+ * @param i0 Start line.
+ * @param in End line.
+ */
+static inline void matrix_init(int i0, int in)
+{
+	for (int i = i0; i < in; i++)
+	{
+		for (int j = 0; j < MATSIZE; j++)
+		{
+			a[i*MATSIZE + j] = 1.0;
+			b[i*MATSIZE + j] = 1.0;
+		}
+	}
+}
+
+/**
+ * @brief Multiples a chunk of the matrices.
+ *
+ * @param i0 Start line.
+ * @param in End line.
+ */
+static inline void matrix_mult(int i0, int in)
+{
+	for (int i = i0; i < in; ++i)
+	{
+		int ii = i*MATSIZE;
+
+		for (int j = 0; j < MATSIZE; ++j)
+		{
+			float c = 0;
+
+			for (int k = 0; k < MATSIZE; k += 4)
+			{
+				c += a[ii + k]*b[k*MATSIZE + j];
+				c += a[ii + k + 1]*b[k*MATSIZE + j + 1];
+				c += a[ii + k + 2]*b[k*MATSIZE + j + 2];
+				c += a[ii + k + 3]*b[k*MATSIZE + j + 3];
+			}
+
+			ret[ii + j] = c;
+		}
+	}
+}
+
+/**
+ * @brief Multiplies matrices.
  */
 static void *task(void *arg)
 {
 	struct tdata *t = arg;
-	int start = t->start;
-	int end = t->end;
+	int i0 = t->i0;
+	int in = t->in;
 	uint64_t t0, t1, tmp;
 	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
 
 	stats[0] = UINT64_MAX;
 
-	/* Warm up. */
-	memfill(&obj1[start], (word_t) - 1, end - start);
-	memfill(&obj2[start], 0, end - start);
-
-	for (int i = 0; i < NITERATIONS + SKIP; i++)
+	for (int i = 0; i < (NITERATIONS + SKIP); i++)
 	{
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
+			matrix_init(i0, in);
+
 			t0 = stopwatch_read();
 			perf_start(0, perf_events[j]);
 
-				memcopy(&obj1[start], &obj2[start], end - start);
+				matrix_mult(i0, in);
 
 			perf_stop(0);
 			t1 = stopwatch_read();
@@ -144,35 +186,33 @@ static void *task(void *arg)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, OBJSIZE, stats);
+			benchmark_dump_stats(i - SKIP, MATSIZE, stats);
 	}
 
 	return (NULL);
 }
 
 /**
- * @brief Memory Move Benchmark Kernel
+ * @brief Matrix Multiplication Benchmark Kernel
  *
  * @param nthreads Number of working threads.
- * @param objsize  Object size.
  */
-static void kernel_memmove(int nthreads, size_t objsize)
+static void kernel_matrix(int nthreads)
 {
-	size_t nbytes;
+	int nrows;
 	kthread_t tid[NTHREADS_MAX];
 
 	/* Save kernel parameters. */
 	NTHREADS = nthreads;
-	OBJSIZE = objsize;
 
-	nbytes = (OBJSIZE/WORD_SIZE)/nthreads;
+	nrows = MATSIZE/nthreads;
 
 	/* Spawn threads. */
 	for (int i = 0; i < nthreads; i++)
 	{
 		/* Initialize thread data structure. */
-		tdata[i].start = nbytes*i;
-		tdata[i].end = (i == (nthreads - 1)) ? (OBJSIZE/WORD_SIZE) : (i + 1)*nbytes;
+		tdata[i].i0 = nrows*i;
+		tdata[i].in = (i == (nthreads - 1)) ? MATSIZE : (i + 1)*nrows;
 		tdata[i].tnum = i;
 
 		kthread_create(&tid[i], task, &tdata[i]);
@@ -184,23 +224,18 @@ static void kernel_memmove(int nthreads, size_t objsize)
 }
 
 /**
- * @brief Memory Move Benchmark
+ * @brief Matrix Multiplication Benchmark
  */
-void benchmark_memmove(void)
+void benchmark_matrix(void)
 {
 #ifndef NDEBUG
 
-	kernel_memmove(1, OBJSIZE_MAX);
+	kernel_matrix(NTHREADS_MAX);
 
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-	{
-		for (size_t objsize = OBJSIZE_MIN; objsize <= OBJSIZE_MAX; objsize += OBJSIZE_STEP)
-			kernel_memmove(nthreads, objsize);
-	}
+		kernel_matrix(nthreads);
 
 #endif
 }
-
-#endif /* __benchmark_memmove__ */

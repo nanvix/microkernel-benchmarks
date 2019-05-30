@@ -17,9 +17,7 @@
 
 #include <nanvix.h>
 #include <stdint.h>
-#include "kbench.h"
-
-#ifdef __benchmark_tsp__
+#include <kbench.h>
 
 /*============================================================================*
  * General configuration                                                      *
@@ -786,4 +784,3 @@ void benchmark_tsp(void)
 
 #endif
 }
-#endif /* __benchmark_tsp__ */

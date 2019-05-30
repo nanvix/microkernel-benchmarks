@@ -27,53 +27,188 @@
 #===============================================================================
 
 # Libraries
-LIBS  = -Wl,--whole-archive $(LIBNANVIX) $(LIBKERNEL) $(LIBHAL)
-LIBS += -Wl,--no-whole-archive $(THEIR_LIBS)
+export LIBS  = -Wl,--whole-archive $(LIBNANVIX) $(LIBKERNEL) $(LIBHAL)
+export LIBS += -Wl,--no-whole-archive $(THEIR_LIBS)
 
 #===============================================================================
-# Sources and Objects
+# Common Sources
 #===============================================================================
 
 # C Source Files
-SRC = $(wildcard *.c)
-
-# Object Files
-OBJ = $(SRC:.c=.$(OBJ_SUFFIX).o)
+export SRC += $(wildcard $(CURDIR)/utils/*.c)
 
 #===============================================================================
+# Generic Rules
+#===============================================================================
 
-# Builds All Object Files
-all: $(OBJ)
-ifeq ($(VERBOSE), no)
-	@echo [CC] $(BINDIR)/$(ELFBIN)
-	@$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
-else
-	$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
-endif
+# Builds everything.
+all: all-buffer all-fork-join all-gf all-kcall-local all-kcall-remote all-mm \
+all-perf all-stream all-tsp all-upcall
 
-# Cleans All Object Files
-clean:
-ifeq ($(VERBOSE), no)
-	@echo [CLEAN] $(OBJ)
-	@rm -rf $(OBJ)
-else
-	rm -rf $(OBJ)
-endif
+# Cleans everything.
+clean: clean-buffer clean-fork-join clean-gf clean-kcall-local \
+clean-kcall-remote clean-mm clean-perf clean-stream clean-tsp clean-upcall
 
-# Cleans Everything
-distclean: clean
-ifeq ($(VERBOSE), no)
-	@echo [CLEAN] $(BINDIR)/$(ELFBIN)
-	@rm -rf $(BINDIR)/$(ELFBIN)
-else
-	rm -rf $(BINDIR)/$(ELFBIN))
-endif
+# Builds all images:
+images: image-buffer image-fork-join image-gf image-kcall-local \
+image-kcall-remote image-mm image-perf image-stream image-tsp image-upcall
 
-# Builds a C Source file
-%.$(OBJ_SUFFIX).o: %.c
-ifeq ($(VERBOSE), no)
-	@echo [CC] $@
-	@$(CC) $(CFLAGS) $< -c -o $@
-else
-	$(CC) $(CFLAGS) $< -c -o $@
-endif
+#===============================================================================
+# buffer
+#===============================================================================
+
+# Builds buffer.
+all-buffer:
+	@$(MAKE) -C buffer all
+
+# Cleans object files.
+clean-buffer:
+	@$(MAKE) -C buffer clean
+
+# Build Buffer Benchmark Binary Image
+image-buffer:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/buffer.img $(BINDIR) buffer
+
+#===============================================================================
+# fork-join
+#===============================================================================
+
+# Builds fork-join.
+all-fork-join:
+	@$(MAKE) -C fork-join all
+
+# Cleans object files.
+clean-fork-join:
+	@$(MAKE) -C fork-join clean
+
+# Build Buffer Benchmark Binary Image
+image-fork-join:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/fork-join.img $(BINDIR) fork-join
+
+#===============================================================================
+# gf
+#===============================================================================
+
+# Builds gf.
+all-gf:
+	@$(MAKE) -C gf all
+
+# Cleans object files.
+clean-gf:
+	@$(MAKE) -C gf clean
+
+# Build Buffer Benchmark Binary Image
+image-gf:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/gf.img $(BINDIR) gf
+
+#===============================================================================
+# kcall-local
+#===============================================================================
+
+# Builds kcall-local.
+all-kcall-local:
+	@$(MAKE) -C kcall-local all
+
+# Cleans object files.
+clean-kcall-local:
+	@$(MAKE) -C kcall-local clean
+
+# Build Buffer Benchmark Binary Image
+image-kcall-local:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/kcall-local.img $(BINDIR) kcall-local
+
+#===============================================================================
+# kcall-remote
+#===============================================================================
+
+# Builds kcall-remote.
+all-kcall-remote:
+	@$(MAKE) -C kcall-remote all
+
+# Cleans object files.
+clean-kcall-remote:
+	@$(MAKE) -C kcall-remote clean
+
+# Build Buffer Benchmark Binary Image
+image-kcall-remote:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/kcall-remote.img $(BINDIR) kcall-remote
+
+#===============================================================================
+# mm
+#===============================================================================
+
+# Builds mm.
+all-mm:
+	@$(MAKE) -C mm all
+
+# Cleans object files.
+clean-mm:
+	@$(MAKE) -C mm clean
+
+# Build Buffer Benchmark Binary Image
+image-mm:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/mm.img $(BINDIR) mm
+
+#===============================================================================
+# perf
+#===============================================================================
+
+# Builds perf.
+all-perf:
+	@$(MAKE) -C perf all
+
+# Cleans object files.
+clean-perf:
+	@$(MAKE) -C perf clean
+
+# Build Buffer Benchmark Binary Image
+image-perf:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/perf.img $(BINDIR) perf
+
+#===============================================================================
+# stream
+#===============================================================================
+
+# Builds stream.
+all-stream:
+	@$(MAKE) -C stream all
+
+# Cleans object files.
+clean-stream:
+	@$(MAKE) -C stream clean
+
+# Build Buffer Benchmark Binary Image
+image-stream:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/stream.img $(BINDIR) stream
+
+#===============================================================================
+# tsp
+#===============================================================================
+
+# Builds tsp.
+all-tsp:
+	@$(MAKE) -C tsp all
+
+# Cleans object files.
+clean-tsp:
+	@$(MAKE) -C tsp clean
+
+# Build Buffer Benchmark Binary Image
+image-tsp:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/tsp.img $(BINDIR) tsp
+
+#===============================================================================
+# upcall
+#===============================================================================
+
+# Builds upcall.
+all-upcall:
+	@$(MAKE) -C upcall all
+
+# Cleans object files.
+clean-upcall:
+	@$(MAKE) -C upcall clean
+
+# Build Buffer Benchmark Binary Image
+image-upcall:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/upcall.img $(BINDIR) upcall

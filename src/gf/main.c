@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright(c) 2011-2019 The Maintainers of Nanvix
+ * Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,87 +22,30 @@
  * SOFTWARE.
  */
 
-OUTPUT_FORMAT("elf32-littleriscv")
-OUTPUT_ARCH("riscv")
+#include <nanvix.h>
+#include <kbench.h>
 
-ENTRY(_do_start)
-
-/*
- * RAM Configuration
+/**
+ * @brief Lunches user-land testing units.
+ *
+ * @param argc Argument counter.
+ * @param argv Argument variables.
  */
-RAM_BASE = 0x80000000; /* Base Address: 2 GB */
-RAM_SIZE = 0x8000000;  /* Size: 128 MB       */
-
-/*
- * Page Size (4 KB)
- */
-PAGE_SIZE = 0x1000;
-
-/*
- * Boot Address
- */
-BOOT_ADDR = RAM_BASE;
-
-MEMORY
+int main(int argc, const char *argv[])
 {
-	ram(wxa!ri) : ORIGIN = BOOT_ADDR, LENGTH = RAM_SIZE
-}
+	((void) argc);
+	((void) argv);
 
-SECTIONS
-{
-	. = BOOT_ADDR;
+	stopwatch_init();
 
-	KERNEL_CODE_START = .;
+	kprintf("--------------------------------------------------------------------------------");
 
-	/* Bootstrap. */
-	.bootstrap :
-	{
-		__BOOTSTRAP_START = .;
-		*boot*.o (.*)
-		__BOOTSTRAP_END = .;
-	} > ram
+	benchmark_gauss();
 
-	. = ALIGN(PAGE_SIZE);
+	kprintf("--------------------------------------------------------------------------------");
 
-	/* Text. */
-	.text : AT(ADDR(.text))
-	{
-		__TEXT_START = .;
-		*(.text)
-		__TEXT_END = .;
-	} > ram
+	/* Shutdown. */
+	shutdown();
 
-
-	. = ALIGN(PAGE_SIZE);
-
-	KERNEL_CODE_END = .;
-	KERNEL_DATA_START = .;
-
-	/* Initialized data. */
-	.data : AT(ADDR(.data))
-	{
-		__DATA_START = .;
-		*(.rodata)
-		*(.data)
-		__DATA_END = .;
-	} > ram
-
-	/* Uninitialized data. */
-	.bss : AT(ADDR(.bss))
-	{
-		__BSS_START = .;
-		*(.bss)
-		__BSS_END = .;
-	} > ram
-
-	. = ALIGN(PAGE_SIZE);
-
-	KERNEL_DATA_END = .;
-
-	/* Discarded. */
-	/DISCARD/ :
-	{
-		*(.comment)
-		*(.note)
-	}
+	return (0);
 }

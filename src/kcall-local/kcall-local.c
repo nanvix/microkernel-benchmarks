@@ -23,10 +23,7 @@
  */
 
 #include <nanvix.h>
-#include <stdint.h>
-#include "kbench.h"
-
-#ifdef __benchmark_fork_join__
+#include <kbench.h>
 
 /**
  * @brief Number of events to profile.
@@ -56,6 +53,14 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 };
 
 /**
+ * @brief Thread info.
+ */
+struct tdata
+{
+	int tnum;  /**< Thread Number */
+} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
+
+/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -68,124 +73,100 @@ static int NTHREADS; /**< Number of Working Threads */
  * @param it    Benchmark iteration.
  * @param stats Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *fork_stats, uint64_t *join_stats)
+static inline void benchmark_dump_stats(int it, uint64_t *stats)
 {
-	printf("%s %d %s %d %d %d %d %d %d %d %d %d",
-		"[benchmarks][fork-join]",
+	printf("%s %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][kcall-local]",
 		it,
-		"f",
 		NTHREADS,
-		UINT32(fork_stats[0]),
-		UINT32(fork_stats[1]),
-		UINT32(fork_stats[2]),
-		UINT32(fork_stats[3]),
-		UINT32(fork_stats[4]),
-		UINT32(fork_stats[5]),
-		UINT32(fork_stats[6]),
-		UINT32(fork_stats[7])
-	);
-
-	printf("%s %d %s %d %d %d %d %d %d %d %d %d",
-		"[benchmarks][fork-join]",
-		it,
-		"j",
-		NTHREADS,
-		UINT32(join_stats[0]),
-		UINT32(join_stats[1]),
-		UINT32(join_stats[2]),
-		UINT32(join_stats[3]),
-		UINT32(join_stats[4]),
-		UINT32(join_stats[5]),
-		UINT32(join_stats[6]),
-		UINT32(join_stats[7])
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6]),
+		UINT32(stats[7])
 	);
 }
 
 /**
- * @brief Dummy task.
- *
- * @param arg Unused argument.
+ * @brief Issues a local kernel call.
  */
 static void *task(void *arg)
 {
-	((void) arg);
-
-	return (NULL);
-}
-
-/**
- * @brief Fork-Join Kernel
- *
- * @param nthreads Number of working threads.
- */
-void kernel_fork_join(int nthreads)
-{
-	kthread_t tid[NTHREADS_MAX];
+	struct tdata *t = arg;
 	uint64_t t0, t1, tmp;
-	uint64_t fork_stats[BENCHMARK_PERF_EVENTS + 1];
-	uint64_t join_stats[BENCHMARK_PERF_EVENTS + 1];
+	uint64_t stats[BENCHMARK_PERF_EVENTS + 1];
 
-	/* Save kernel parameters. */
-	NTHREADS = nthreads;
+	UNUSED(t);
 
-	fork_stats[0] = UINT64_MAX;
-	join_stats[0] = UINT64_MAX;
+	stats[0] = UINT64_MAX;
 
-	for (int i = 0; i < (NITERATIONS + SKIP); i++)
+	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
 			t0 = stopwatch_read();
 			perf_start(0, perf_events[j]);
 
-				/* Spawn threads. */
-				for (int k = 0; k < nthreads; k++)
-					kthread_create(&tid[k], task, NULL);
+				syscall0(NR_thread_get_id);
 
 			perf_stop(0);
 			t1 = stopwatch_read();
 
 			tmp = stopwatch_diff(t0, t1);
-			if (tmp < fork_stats[0])
-				fork_stats[0] = tmp;
-			fork_stats[j + 1] = perf_read(0);
-
-			t0 = stopwatch_read();
-			perf_start(0, perf_events[j]);
-
-				/* Wait for threads. */
-				for (int k = 0; k < nthreads; k++)
-					kthread_join(tid[k], NULL);
-
-			perf_stop(0);
-			t1 = stopwatch_read();
-
-			tmp = stopwatch_diff(t0, t1);
-			if (tmp < join_stats[0])
-				join_stats[0] = tmp;
-			join_stats[j + 1] = perf_read(0);
+			if (tmp < stats[0])
+				stats[0] = tmp;
+			stats[j + 1] = perf_read(0);
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, fork_stats, join_stats);
+			benchmark_dump_stats(i - SKIP, stats);
 	}
+
+	return (NULL);
 }
 
 /**
- * @brief Fork-Join Benchmark
+ * @brief Local Kernel Call Benchmark Kernel
+ *
+ * @param nthreads Number of working threads.
  */
-void benchmark_fork_join(void)
+static void kernel_kcall_local(int nthreads)
+{
+	kthread_t tid[NTHREADS_MAX];
+
+	/* Save kernel parameters. */
+	NTHREADS = nthreads;
+
+	/* Spawn threads. */
+	for (int i = 0; i < nthreads; i++)
+	{
+		/* Initialize thread data structure. */
+		tdata[i].tnum = i;
+
+		kthread_create(&tid[i], task, &tdata[i]);
+	}
+
+	/* Wait for threads. */
+	for (int i = 0; i < nthreads; i++)
+		kthread_join(tid[i], NULL);
+}
+
+/**
+ * @brief Local Kernel Call Benchmark
+ */
+void benchmark_kcall_local(void)
 {
 #ifndef NDEBUG
 
-	kernel_fork_join(NTHREADS_MAX);
+	kernel_kcall_local(NTHREADS_MAX);
 
 #else
 
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_fork_join(nthreads);
+		kernel_kcall_local(nthreads);
 
 #endif
 }
-
-#endif /* __benchmark_fork_join__ */

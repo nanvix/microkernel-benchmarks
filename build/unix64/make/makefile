@@ -1,4 +1,5 @@
 #
+#
 # MIT License
 #
 # Copyright(c) 2011-2019 The Maintainers of Nanvix
@@ -26,32 +27,40 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __optimsoc__     # Target
-export CFLAGS += -D __optimsoc4__    # Processor
-export CFLAGS += -D __or1k_cluster__ # CLuster
-export CFLAGS += -D __or1k__         # Core
-export CFLAGS += -D __mor1kx__       # Core Variant
+export TARGET    ?= unix64
+export PROCESSOR := linux64
 
 #===============================================================================
 # Toolchain Configuration
 #===============================================================================
 
 # Toolchain Directory
-export TOOLCHAIN_DIR ?= $(UTILSDIR)/toolchain/or1k/bin/
+export TOOLCHAIN_DIR ?= $(TOOLSDIR)/dev/toolchain/unix/bin
 
 # Toolchain
-export CC = $(TOOLCHAIN_DIR)/or1k-elf-gcc
-export LD = $(TOOLCHAIN_DIR)/or1k-elf-ld
-export AR = $(TOOLCHAIN_DIR)/or1k-elf-ar
+export CC = gcc
+export LD = ld
+export AR = ar
 
 # Compiler Options
-export CFLAGS  += -Wstack-usage=4096
-export CFLAGS  += -nostdlib -nostdinc
-export CFLAGS += -Wno-error=type-limits
-export CFLAGS += -I $(INCDIR)/posix
+export CFLAGS  = -D __unix64__ -D__linux64__
+#export CFLAGS += -nostdlib -nostdinc
+export CFLAGS += -ansi # -pedantic-errors
+export CFLAGS += -Wstack-usage=4096
+export CFLAGS += -D __HAS_HW_DIVISION
+#export CFLAGS += -D __INTERFACE_CHECK_CORE_AL
+#export CFLAGS += -D __INTERFACE_CHECK_CLUSTER_AL
+#export CFLAGS += -D __INTERFACE_CHECK_PROCESSOR_AL
+#export CFLAGS += -D __INTERFACE_CHECK_TARGET_AL
 
 # Linker Options
-export LDFLAGS  += -nostdlib -nostdinc
+export LDFLAGS =
 
-# Suffix for Objects
-export OBJ_SUFFIX=optimsoc
+#===============================================================================
+# Libraries and Binaries
+#===============================================================================
+
+# Libraries
+export LIBKERNEL = libhal-$(TARGET).a
+export LIBS = $(LIBDIR)/$(LIBKERNEL)
+export LIB_THEIRS = -lpthread
