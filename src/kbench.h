@@ -139,6 +139,7 @@
 	extern void benchmark_fork_join(void);
 	extern void benchmark_upcall(void);
 	extern void benchmark_gauss(void);
+	extern void benchmark_tsp(void);
 	/**@}*/
 
 #endif /* _KBENCH_H_ */
