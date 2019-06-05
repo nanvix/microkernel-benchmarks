@@ -1,3 +1,7 @@
+[submodule "contrib/ulibc"]
+	path = contrib/ulibc
+	url = https://github.com/nanvix/ulibc.git
+	branch = unstable
 [submodule "contrib/microkernel"]
 	path = contrib/microkernel
 	url = https://github.com/nanvix/microkernel.git
