@@ -6,3 +6,7 @@
 	path = contrib/microkernel
 	url = https://github.com/nanvix/microkernel.git
 	branch = unstable
+[submodule "utils"]
+	path = utils
+	url = https://github.com/nanvix/utils.git
+	branch = unstable
