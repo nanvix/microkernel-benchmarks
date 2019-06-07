@@ -30,16 +30,20 @@
  * @name Benchmark Parameters
  */
 /**@{*/
-#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
-#define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
+#define NTHREADS_MIN                1  /**< Minimum Number of Worker Threads      */
+#define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Worker Threads      */
+#define NTHREADS_STEP               1  /**< Increment on Number of Worker Threads */
+#define FLOPS                 (10008) /**< Number of Floating Point Operations   */
+#define NIOOPS                  (100) /**< Number of Floating Point Operations   */
 /**@}*/
 
 /**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
-static int NTHREADS; /**< Number of Working Threads */
+static int NWORKERS;      /**< Number of Worker Threads */
+static int NIDLE;         /**< Number of Idle Threads   */
+static char *NOISE = "y"; /**< Noise On?                */
 /**@}*/
 
 /*============================================================================*
@@ -76,10 +80,12 @@ static inline void benchmark_dump_stats(int it, uint64_t *stats)
 
 	spinlock_lock(&lock);
 
-		printf("%s %d %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][kcall-remote]",
+		printf("%s %d %s %d %d %d %d %d %d %d %d %d\n",
+			"[benchmarks][noise]",
 			it,
-			NTHREADS,
+			NOISE,
+			NWORKERS,
+			NIDLE,
 			UINT32(stats[0]),
 			UINT32(stats[1]),
 			UINT32(stats[2]),
@@ -97,22 +103,21 @@ static inline void benchmark_dump_stats(int it, uint64_t *stats)
  *============================================================================*/
 
 /**
- * @brief Thread info.
+ * @brief Task info.
  */
-struct tdata
+static struct tdata
 {
-	int tnum;  /**< Thread Number */
+	float scratch;  /**< Scratch Variable  */
 } tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
 
 /**
- * @brief Issues a remote kernel call.
+ * @brief Performs some FPU intensive computation.
  */
-static void *task(void *arg)
+static void *task_worker(void *arg)
 {
 	struct tdata *t = arg;
+	register float tmp = t->scratch;
 	uint64_t stats[BENCHMARK_PERF_EVENTS];
-
-	UNUSED(t);
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
@@ -120,7 +125,15 @@ static void *task(void *arg)
 		{
 			perf_start(0, perf_events[j]);
 
-				syscall0(NR_SYSCALLS);
+				for (int k = 0; k < FLOPS; k += 9)
+				{
+					register float k1 = k*1.1;
+					register float k2 = k*2.1;
+					register float k3 = k*3.1;
+					register float k4 = k*4.1;
+
+					tmp += k1 + k2 + k3 + k4;
+				}
 
 			perf_stop(0);
 			stats[j] = perf_read(0);
@@ -130,33 +143,69 @@ static void *task(void *arg)
 			benchmark_dump_stats(i - SKIP, stats);
 	}
 
+	/* Avoid compiler optimizations. */
+	t->scratch = tmp;
+
 	return (NULL);
 }
 
 /**
- * @brief Remote Kernel Call Benchmark Kernel
- *
- * @param nthreads Number of working threads.
+ * @brief Issues some remote kernel calls.
  */
-static void kernel_kcall_remote(int nthreads)
+static void *task_idle(void *arg)
 {
-	kthread_t tid[NTHREADS_MAX];
+	UNUSED(arg);
+
+	for (int i = 0; i < NITERATIONS + SKIP; i++)
+	{
+		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
+		{
+			for (int k = 0; k < NIOOPS; k++)
+				syscall0(NR_SYSCALLS);
+		}
+	}
+
+	return (NULL);
+}
+
+/*============================================================================*
+ * Kernel Noise Benchmark                                                     *
+ *============================================================================*/
+
+/**
+ * @brief Kernel Noise Benchmark Kernel
+ *
+ * @param nworkers Number of worker threads.
+ * @param nidle    Number of idle threads.
+ */
+static void benchmark_noise(int nworkers, int nidle)
+{
+	kthread_t tid_workers[NTHREADS_MAX];
+	kthread_t tid_idle[NTHREADS_MAX];
 
 	/* Save kernel parameters. */
-	NTHREADS = nthreads;
+	NWORKERS = nworkers;
+	NIDLE = nidle;
 
-	/* Spawn threads. */
-	for (int i = 0; i < nthreads; i++)
+	/*
+	 * Spawn idle threads first,
+	 * so that we have a noisy system.
+	 */
+	for (int i = 0; i < nidle; i++)
+		kthread_create(&tid_idle[i], task_idle, NULL);
+
+	/* Spawn worker threads. */
+	for (int i = 0; i < nworkers; i++)
 	{
-		/* Initialize thread data structure. */
-		tdata[i].tnum = i;
-
-		kthread_create(&tid[i], task, &tdata[i]);
+		tdata[i].scratch = 0.0;
+		kthread_create(&tid_workers[i], task_worker, &tdata[i]);
 	}
 
 	/* Wait for threads. */
-	for (int i = 0; i < nthreads; i++)
-		kthread_join(tid[i], NULL);
+	for (int i = 0; i < nworkers; i++)
+		kthread_join(tid_workers[i], NULL);
+	for (int i = 0; i < nidle; i++)
+		kthread_join(tid_idle[i], NULL);
 }
 
 /*============================================================================*
@@ -164,7 +213,7 @@ static void kernel_kcall_remote(int nthreads)
  *============================================================================*/
 
 /**
- * @brief Remote Kernel Call Benchmark
+ * @brief Kernel Noise Benchmark
  *
  * @param argc Argument counter.
  * @param argv Argument variables.
@@ -178,12 +227,18 @@ int main(int argc, const char *argv[])
 
 #ifndef NDEBUG
 
-	kernel_kcall_remote(NTHREADS_MAX);
+	benchmark_noise(NTHREADS_MAX/2, NTHREADS_MAX/2);
 
 #else
 
+	/* With noise. */
 	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_kcall_remote(nthreads);
+		benchmark_noise(nthreads, NTHREADS_MAX - nthreads);
+
+	/* No noise. */
+	NOISE = "n";
+	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
+		benchmark_noise(nthreads, 0);
 
 #endif
 

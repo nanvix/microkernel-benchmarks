@@ -58,6 +58,7 @@ export UTILSDIR   := $(ROOTDIR)/utils
 export LIBHAL    = $(LIBDIR)/libhal-$(TARGET).a
 export LIBKERNEL = $(LIBDIR)/libkernel-$(TARGET).a
 export LIBNANVIX = $(LIBDIR)/libnanvix-$(TARGET).a
+export LIBC      = $(LIBDIR)/libc-$(TARGET).a
 
 #===============================================================================
 # Target-Specific Make Rules

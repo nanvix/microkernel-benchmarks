@@ -22,23 +22,53 @@
 # SOFTWARE.
 #
 
-# Builds Contrib Projects
-contrib: contrib-ulibc contrib-microkernel
+#===============================================================================
+# Sources, Objects and Binary
+#===============================================================================
 
-# Build Nanvix Microkernel
-contrib-microkernel: make-dirs
-	$(MAKE) -C $(CONTRIBDIR)/microkernel contrib
-	$(MAKE) -C $(CONTRIBDIR)/microkernel install PREFIX=$(ROOTDIR) RELEASE=true
+# C Source Files
+SRC += $(wildcard *.c)
 
-# Build uLibc
-contrib-ulibc: make-dirs
-	$(MAKE) -C $(CONTRIBDIR)/ulibc contrib
-	$(MAKE) -C $(CONTRIBDIR)/ulibc install PREFIX=$(ROOTDIR) RELEASE=true
-	
+# Object Files
+OBJ += $(SRC:.c=.$(OBJ_SUFFIX).o)
 
-# Cleans Contrib Projects
-contrib-uninstall:
-	$(MAKE) -C $(CONTRIBDIR)/microkernel contrib-uninstall
-	$(MAKE) -C $(CONTRIBDIR)/microkernel uninstall PREFIX=$(ROOTDIR) RELEASE=true
-	$(MAKE) -C $(CONTRIBDIR)/ulibc contrib-uninstall
-	$(MAKE) -C $(CONTRIBDIR)/ulibc uninstall PREFIX=$(ROOTDIR) RELEASE=true
+# Binary File
+ELFBIN = noise-$(OBJ_SUFFIX)
+
+#===============================================================================
+
+# Builds All Object Files
+all: $(OBJ)
+ifeq ($(VERBOSE), no)
+	@echo [CC] $(BINDIR)/$(ELFBIN)
+	@$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
+else
+	$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
+endif
+
+# Cleans All Object Files
+clean:
+ifeq ($(VERBOSE), no)
+	@echo [CLEAN] $(OBJ)
+	@rm -rf $(OBJ)
+else
+	rm -rf $(OBJ)
+endif
+
+# Cleans Everything
+distclean: clean
+ifeq ($(VERBOSE), no)
+	@echo [CLEAN] $(BINDIR)/$(ELFBIN)
+	@rm -rf $(BINDIR)/$(ELFBIN)
+else
+	rm -rf $(BINDIR)/$(ELFBIN))
+endif
+
+# Builds a C Source file
+%.$(OBJ_SUFFIX).o: %.c
+ifeq ($(VERBOSE), no)
+	@echo [CC] $@
+	@$(CC) $(CFLAGS) $< -c -o $@
+else
+	$(CC) $(CFLAGS) $< -c -o $@
+endif

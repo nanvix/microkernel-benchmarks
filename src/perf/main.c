@@ -22,30 +22,99 @@
  * SOFTWARE.
  */
 
+#include <ulibc/stdio.h>
 #include <nanvix.h>
 #include <kbench.h>
 
+/*============================================================================*
+ * Profilling                                                                 *
+ *============================================================================*/
+
 /**
- * @brief Lunches user-land testing units.
+ * @brief Number of events to profile.
+ */
+#define BENCHMARK_PERF_EVENTS 7
+
+/**
+ * Performance events.
+ */
+static int perf_events[BENCHMARK_PERF_EVENTS] = {
+	PERF_CYCLES,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_REG_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_DTLB_STALLS
+};
+
+/**
+ * @brief Dump execution statistics.
+ *
+ * @param it    Benchmark iteration.
+ * @param stats Execution statistics.
+ */
+static inline void benchmark_dump_stats(int it, uint64_t *stats)
+{
+	static spinlock_t lock = SPINLOCK_UNLOCKED;
+
+	spinlock_lock(&lock);
+
+		printf("%s %d %d %d %d %d %d %d %d\n",
+			"[benchmarks][perf]",
+			it,
+			UINT32(stats[0]),
+			UINT32(stats[1]),
+			UINT32(stats[2]),
+			UINT32(stats[3]),
+			UINT32(stats[4]),
+			UINT32(stats[5]),
+			UINT32(stats[6])
+		);
+
+	spinlock_unlock(&lock);
+}
+
+/*============================================================================*
+ * Benchmark Driver                                                           *
+ *============================================================================*/
+
+/**
+ * @brief Performance Monitoring Overhead Benchmark
  *
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
 int main(int argc, const char *argv[])
 {
+	uint64_t stats[BENCHMARK_PERF_EVENTS];
+
 	((void) argc);
 	((void) argv);
 
-	stopwatch_init();
+	printf(HLINE);
 
-	kprintf("--------------------------------------------------------------------------------");
+	/*
+	 * TODO: Query performance monitoring capabilities.
+	 */
 
-	benchmark_perf();
+	for (int i = 0; i < NITERATIONS + SKIP; i++)
+	{
+		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
+		{
+			perf_start(0, perf_events[j]);
 
-	kprintf("--------------------------------------------------------------------------------");
+				/* noop. */
 
-	/* Shutdown. */
-	shutdown();
+			perf_stop(0);
+			stats[j] = perf_read(0);
+		}
+
+		if (i >= SKIP)
+			benchmark_dump_stats(i - SKIP, stats);
+	}
+
+	printf(HLINE);
 
 	return (0);
 }

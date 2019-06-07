@@ -70,6 +70,7 @@ all-k1bdp:
 		LIBHAL=$(LIBDIR)/libhal-k1b-node.a             \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a       \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a       \
+		LIBC=$(LIBDIR)/libc-k1b-node.a                 \
 		OBJ_SUFFIX=k1bdp
 
 # Builds everything for node ioddr variant.
@@ -81,6 +82,7 @@ all-k1bio:
 		LIBHAL=$(LIBDIR)/libhal-k1b-ioddr.a             \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a       \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a       \
+		LIBC=$(LIBDIR)/libc-k1b-ioddr.a                 \
 		OBJ_SUFFIX=k1bio
 
 # Cleans object files.
@@ -104,6 +106,7 @@ distclean-k1bdp: clean-target
 	@$(MAKE) -C $(SRCDIR) distclean              \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a \
+		LIBC=$(LIBDIR)/libc-k1b-node.a           \
 		OBJ_SUFFIX=k1bdp
 
 # Cleans everything for node ioddr variant.
@@ -111,4 +114,5 @@ distclean-k1bio: clean-target
 	@$(MAKE) -C $(SRCDIR) distclean               \
 		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a \
 		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a \
+		LIBC=$(LIBDIR)/libc-k1b-ioddr.a           \
 		OBJ_SUFFIX=k1bio

@@ -25,6 +25,7 @@
 #ifndef _KBENCH_H_
 #define _KBENCH_H_
 
+	#include <nanvix.h>
 	#include <stdint.h>
 
 	/**
@@ -47,38 +48,10 @@
 	#define UINT32(x) ((uint32_t)((x) & 0xffffffff))
 
 	/**
-	 * @brief Alias for kprintf().
+	 * @brief An horizontal line.
 	 */
-	#define printf(fmt, ...) kprintf(fmt, ##__VA_ARGS__)
+	#define HLINE "--------------------------------------------------------------------------------\n"
 
-/*============================================================================*
- * Stopwatch                                                                  *
- *============================================================================*/
-
-	/**
-	 * @brief Initializes the stopwatch.
-	 */
-	extern void stopwatch_init(void);
-
-	/**
-	 * @brief Computes the time difference on the stopwatch.
-	 *
-	 * @param t0 First timestamp.
-	 * @param t1 Second timestamp.
-	 *
-	 * @returns The difference between t0 and t1.
-	 */
-	extern uint64_t stopwatch_diff(uint64_t t0, uint64_t t1);
-
-	/**
-	 * @brief Reads the stopwatch.
-	 *
-	 * @param The current timestamp of the stopwatch.
-	 */
-	static inline uint64_t stopwatch_read(void)
-	{
-		return (clock_read());
-	}
 
 /*============================================================================*
  * Memory Functions                                                           *
@@ -121,25 +94,5 @@
 		for (size_t i = 0; i < n; i++)
 			*d++ = *s++;
 	}
-
-/*============================================================================*
- * Kernel benchmark                                                           *
- *============================================================================*/
-
-	/**
-	 * @name Benchmarks
-	 */
-	/**@{*/
-	extern void benchmark_perf(void);
-	extern void benchmark_kcall_local(void);
-	extern void benchmark_kcall_remote(void);
-	extern void benchmark_matrix(void);
-	extern void benchmark_buffer(void);
-	extern void benchmark_memmove(void);
-	extern void benchmark_fork_join(void);
-	extern void benchmark_upcall(void);
-	extern void benchmark_gauss(void);
-	extern void benchmark_tsp(void);
-	/**@}*/
 
 #endif /* _KBENCH_H_ */

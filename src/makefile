@@ -23,35 +23,30 @@
 #
 
 #===============================================================================
-# Toolchain Configuration 
+# Toolchain Configuration
 #===============================================================================
 
 # Libraries
-export LIBS  = -Wl,--whole-archive $(LIBNANVIX) $(LIBKERNEL) $(LIBHAL)
+export LIBS  = -Wl,--whole-archive $(LIBC) $(LIBNANVIX) $(LIBKERNEL) $(LIBHAL)
 export LIBS += -Wl,--no-whole-archive $(THEIR_LIBS)
-
-#===============================================================================
-# Common Sources
-#===============================================================================
-
-# C Source Files
-export SRC += $(wildcard $(CURDIR)/utils/*.c)
 
 #===============================================================================
 # Generic Rules
 #===============================================================================
 
-# Builds everything.
+# Builds Binary Files
 all: all-buffer all-fork-join all-gf all-kcall-local all-kcall-remote all-mm \
-all-perf all-stream all-tsp all-upcall
+all-noise all-perf all-server all-stream all-tsp all-upcall
 
-# Cleans everything.
+# Cleans Object Files
 clean: clean-buffer clean-fork-join clean-gf clean-kcall-local \
-clean-kcall-remote clean-mm clean-perf clean-stream clean-tsp clean-upcall
+clean-kcall-remote clean-mm clean-noise clean-perf clean-server clean-stream \
+clean-tsp clean-upcall
 
-# Builds all images:
+# Builds Binary Image Files
 images: image-buffer image-fork-join image-gf image-kcall-local \
-image-kcall-remote image-mm image-perf image-stream image-tsp image-upcall
+image-kcall-remote image-mm image-noise image-perf image-server image-stream \
+image-tsp image-upcall
 
 #===============================================================================
 # buffer
@@ -150,6 +145,22 @@ image-mm:
 	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/mm.img $(BINDIR) mm
 
 #===============================================================================
+# noise
+#===============================================================================
+
+# Builds noise.
+all-noise:
+	@$(MAKE) -C noise all
+
+# Cleans object files.
+clean-noise:
+	@$(MAKE) -C noise clean
+
+# Build Buffer Benchmark Binary Image
+image-noise:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/noise.img $(BINDIR) noise
+
+#===============================================================================
 # perf
 #===============================================================================
 
@@ -164,6 +175,22 @@ clean-perf:
 # Build Buffer Benchmark Binary Image
 image-perf:
 	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/perf.img $(BINDIR) perf
+
+#===============================================================================
+# server
+#===============================================================================
+
+# Builds server.
+all-server:
+	@$(MAKE) -C server all
+
+# Cleans object files.
+clean-server:
+	@$(MAKE) -C server clean
+
+# Build Buffer Benchmark Binary Image
+image-server:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/server.img $(BINDIR) server
 
 #===============================================================================
 # stream
@@ -182,22 +209,6 @@ image-stream:
 	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/stream.img $(BINDIR) stream
 
 #===============================================================================
-# tsp
-#===============================================================================
-
-# Builds tsp.
-all-tsp:
-	@$(MAKE) -C tsp all
-
-# Cleans object files.
-clean-tsp:
-	@$(MAKE) -C tsp clean
-
-# Build Buffer Benchmark Binary Image
-image-tsp:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/tsp.img $(BINDIR) tsp
-
-#===============================================================================
 # upcall
 #===============================================================================
 
@@ -212,3 +223,19 @@ clean-upcall:
 # Build Buffer Benchmark Binary Image
 image-upcall:
 	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/upcall.img $(BINDIR) upcall
+
+#===============================================================================
+# tsp
+#===============================================================================
+
+# Builds tsp.
+all-tsp:
+	@$(MAKE) -C tsp all
+
+# Cleans object files.
+clean-tsp:
+	@$(MAKE) -C tsp clean
+
+# Build Buffer Benchmark Binary Image
+image-tsp:
+	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/tsp.img $(BINDIR) tsp
