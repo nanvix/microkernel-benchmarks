@@ -26,11 +26,11 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __optimsoc__     # Target
-export CFLAGS += -D __optimsoc4__    # Processor
-export CFLAGS += -D __or1k_cluster__ # CLuster
-export CFLAGS += -D __or1k__         # Core
-export CFLAGS += -D __mor1kx__       # Core Variant
+export CFLAGS  = -D __optimsoc__         # Target
+export CFLAGS += -D __optimsoc4__        # Processor
+export CFLAGS += -D __optimsoc_cluster__ # CLuster
+export CFLAGS += -D __or1k__             # Core
+export CFLAGS += -D __mor1kx__           # Core Variant
 
 #===============================================================================
 # Toolchain Configuration
@@ -47,7 +47,8 @@ export AR = $(TOOLCHAIN_DIR)/or1k-elf-ar
 # Compiler Options
 export CFLAGS  += -Wstack-usage=4096
 export CFLAGS  += -nostdlib -nostdinc
-export CFLAGS += -Wno-error=type-limits
+export CFLAGS  += -Wno-error=type-limits
+export CFLAGS  += -Wno-type-limits
 export CFLAGS += -I $(INCDIR)/posix
 
 # Linker Options
@@ -55,3 +56,19 @@ export LDFLAGS  += -nostdlib -nostdinc
 
 # Suffix for Objects
 export OBJ_SUFFIX=optimsoc
+
+#===============================================================================
+# Libraries
+#===============================================================================
+
+export THEIR_LIBS := -lgcc
+
+#===============================================================================
+
+# Builds everything.
+all-target:
+	$(MAKE) -C $(SRCDIR) all
+
+# Cleans everything.
+clean-target:
+	$(MAKE) -C $(SRCDIR) clean
