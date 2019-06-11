@@ -23,6 +23,7 @@
  */
 
 #include <ulibc/stdio.h>
+#include <ulibc/limits.h>
 #include <nanvix.h>
 #include <stdint.h>
 #include <kbench.h>
