@@ -53,12 +53,17 @@ static size_t OBJSIZE; /**< Object Size               */
 /**
  * @brief Number of events to profile.
  */
-#define BENCHMARK_PERF_EVENTS 7
+#if defined(__mppa256__)
+	#define BENCHMARK_PERF_EVENTS 7
+#elif defined(__optimsoc__)
+	#define BENCHMARK_PERF_EVENTS 5
+#endif
 
 /**
  * Performance events.
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
+#if defined(__mppa256__)
 	PERF_CYCLES,
 	PERF_ICACHE_STALLS,
 	PERF_DCACHE_STALLS,
@@ -66,6 +71,13 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_REG_STALLS,
 	PERF_ITLB_STALLS,
 	PERF_DTLB_STALLS
+#elif defined(__optimsoc__)
+	PERF_CYCLES,
+	PERF_BRANCH_STALLS,
+	PERF_ICACHE_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_REG_STALLS
+#endif
 };
 
 /**
