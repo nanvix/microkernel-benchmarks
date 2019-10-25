@@ -26,9 +26,14 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __optimsoc__         # Target
+export TARGET    ?= optimsoc
+export PROCESSOR := optimsoc4
+export CLUSTER   := or1k-cluster
+export CORE      := mor1kx
+
+export CFLAGS := -D __optimsoc__         # Target
 export CFLAGS += -D __optimsoc4__        # Processor
-export CFLAGS += -D __optimsoc_cluster__ # CLuster
+export CFLAGS += -D __optimsoc_cluster__ # Cluster
 export CFLAGS += -D __or1k__             # Core
 export CFLAGS += -D __mor1kx__           # Core Variant
 
@@ -37,38 +42,45 @@ export CFLAGS += -D __mor1kx__           # Core Variant
 #===============================================================================
 
 # Toolchain Directory
-export TOOLCHAIN_DIR ?= $(UTILSDIR)/toolchain/or1k/bin/
+export TOOLCHAIN_DIR ?= $(TOOLSDIR)/toolchain/or1k/bin/
 
 # Toolchain
-export CC = $(TOOLCHAIN_DIR)/or1k-elf-gcc
-export LD = $(TOOLCHAIN_DIR)/or1k-elf-ld
-export AR = $(TOOLCHAIN_DIR)/or1k-elf-ar
+export CC := $(TOOLCHAIN_DIR)/or1k-elf-gcc
+export LD := $(TOOLCHAIN_DIR)/or1k-elf-ld
+export AR := $(TOOLCHAIN_DIR)/or1k-elf-ar
 
 # Compiler Options
-export CFLAGS  += -Wstack-usage=4096
-export CFLAGS  += -nostdlib -nostdinc
-export CFLAGS  += -Wno-error=type-limits
-export CFLAGS  += -Wno-type-limits
-export CFLAGS += -I $(INCDIR)/posix
+export CFLAGS += -nostdlib -nostdinc -ffreestanding
+export CFLAGS += -ansi -pedantic-errors
+export CFLAGS += -Wstack-usage=4096
+export CFLAGS += -Wno-type-limits
+
+# Timeout Variable
+export TIMEOUT ?= 5
 
 # Linker Options
-export LDFLAGS  += -nostdlib -nostdinc
+export LDFLAGS := -nostdlib -nostdinc -ffreestanding
 
 # Suffix for Objects
-export OBJ_SUFFIX=optimsoc
+export OBJ_SUFFIX := optimsoc
 
 #===============================================================================
 # Libraries
 #===============================================================================
 
 export THEIR_LIBS := -lgcc
+export LIBLWIP :=
 
 #===============================================================================
 
 # Builds everything.
-all-target:
-	$(MAKE) -C $(SRCDIR) all
+all-target: make-dirs
+	@$(MAKE) -C $(SRCDIR) all
+
+# Cleans object files.
+clean-target:
+	@$(MAKE) -C $(SRCDIR) clean
 
 # Cleans everything.
-clean-target:
-	$(MAKE) -C $(SRCDIR) clean
+distclean-target:
+	@$(MAKE) -C $(SRCDIR) distclean

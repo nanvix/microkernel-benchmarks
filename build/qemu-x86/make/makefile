@@ -26,7 +26,12 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __qemu_x86__    # Target
+export TARGET    ?= qemu-x86
+export PROCESSOR := x86
+export CLUSTER   := x86-cluster
+export CORE      := i486
+
+export CFLAGS := -D __qemu_x86__    # Target
 export CFLAGS += -D __x86__         # Processor
 export CFLAGS += -D __x86_cluster__ # Cluster
 export CFLAGS += -D __i486__        # Core
@@ -36,37 +41,46 @@ export CFLAGS += -D __i486__        # Core
 #===============================================================================
 
 # Toolchain Directory
-export TOOLCHAIN_DIR ?= $(UTILSDIR)/toolchain/i486/bin
+export TOOLCHAIN_DIR ?= $(TOOLSDIR)/toolchain/i486/bin
 
 # Toolchain
-export CC = $(TOOLCHAIN_DIR)/i486-elf-gcc
-export LD = $(TOOLCHAIN_DIR)/i486-elf-ld
-export AR = $(TOOLCHAIN_DIR)/i486-elf-ar
+export CC := $(TOOLCHAIN_DIR)/i486-elf-gcc
+export LD := $(TOOLCHAIN_DIR)/i486-elf-ld
+export AR := $(TOOLCHAIN_DIR)/i486-elf-ar
+
+# Timeout Variable
+export TIMEOUT ?= 5
 
 # Compiler Options
-export CFLAGS  += -D __HAS_HW_DIVISION
-export CFLAGS  += -Wstack-usage=4096
-export CFLAGS  += -nostdlib -nostdinc
-export CFLAGS += -I $(INCDIR)/posix
+export CFLAGS += -nostdlib -nostdinc -ffreestanding
+export CFLAGS += -ansi -pedantic-errors
+export CFLAGS += -Wstack-usage=4096
+export CFLAGS += -D __HAS_HW_DIVISION
 
 # Linker Options
-export LDFLAGS += -nostdlib -nostdinc
+export LDFLAGS := -nostdlib -nostdinc -ffreestanding
+export LDFLAGS += -Wl,--allow-multiple-definition
 
 # Suffix for Objects
-export OBJ_SUFFIX=qemu-x86
+export OBJ_SUFFIX := qemu-x86
 
 #===============================================================================
 # Libraries
 #===============================================================================
 
 export THEIR_LIBS := -lgcc
+export LIBLWIP := liblwip-qemu-x86.a
 
 #===============================================================================
 
 # Builds everything.
-all-target:
-	$(MAKE) -C $(SRCDIR) all
+all-target: make-dirs
+	@$(MAKE) -C $(SRCDIR) all
+
+# Cleans object files.
+clean-target:
+	@$(MAKE) -C $(SRCDIR) clean
 
 # Cleans everything.
-clean-target:
-	$(MAKE) -C $(SRCDIR) clean
+distclean-target:
+	@$(MAKE) -C $(SRCDIR) distclean
