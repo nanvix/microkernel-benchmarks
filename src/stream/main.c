@@ -22,8 +22,10 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <nanvix.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/ulib.h>
+#include <posix/sys/types.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
 /**
@@ -39,6 +41,12 @@
 /**@}*/
 
 /**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
+
+/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -47,8 +55,13 @@ static size_t OBJSIZE; /**< Object Size               */
 /**@}*/
 
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
+
+/**
+ * @brief Name of the benchmark.
+ */
+#define BENCHMARK_NAME "stream"
 
 /**
  * @brief Number of events to profile.
@@ -57,6 +70,8 @@ static size_t OBJSIZE; /**< Object Size               */
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
 	#define BENCHMARK_PERF_EVENTS 5
+#else
+	#define BENCHMARK_PERF_EVENTS 1
 #endif
 
 /**
@@ -64,19 +79,21 @@ static size_t OBJSIZE; /**< Object Size               */
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 #if defined(__mppa256__)
-	PERF_CYCLES,
-	PERF_ICACHE_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_REG_STALLS,
+	PERF_DTLB_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS
-#elif defined(__optimsoc__)
-	PERF_CYCLES,
+	PERF_REG_STALLS,
 	PERF_BRANCH_STALLS,
-	PERF_ICACHE_STALLS,
 	PERF_DCACHE_STALLS,
-	PERF_REG_STALLS
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#elif defined(__optimsoc__)
+	PERF_REG_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#else
+	0
 #endif
 };
 
@@ -84,30 +101,36 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @brief Dump execution statistics.
  *
  * @param it      Benchmark iteration.
+ * @oaram name    Benchmark name.
  * @param objsize Object size.
  * @param stats   Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, size_t objsize, uint64_t *stats)
+static void benchmark_dump_stats(int it, const char *name, size_t objsize, uint64_t *stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
-
-	spinlock_lock(&lock);
-
-		printf("%s %d %d %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][stream]",
-			it,
-			NTHREADS,
-			objsize,
-			UINT32(stats[0]),
-			UINT32(stats[1]),
-			UINT32(stats[2]),
-			UINT32(stats[3]),
-			UINT32(stats[4]),
-			UINT32(stats[5]),
-			UINT32(stats[6])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf(
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d %d %d",
+#elif (BENCHMARK_PERF_EVENTS >= 5)
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s] %d %d %d %d",
+#endif
+		name,
+		it,
+		NTHREADS,
+		objsize,
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		UINT32(stats[6]),
+		UINT32(stats[5]),
+#endif
+#if (BENCHMARK_PERF_EVENTS >= 5)
+		UINT32(stats[4]),
+		UINT32(stats[3]),
+		UINT32(stats[2]),
+		UINT32(stats[1]),
+#endif
+		UINT32(stats[0])
+	);
 }
 
 /*============================================================================*
@@ -159,7 +182,7 @@ static void *task(void *arg)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, OBJSIZE, stats);
+			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, OBJSIZE, stats);
 	}
 
 	return (NULL);
@@ -208,12 +231,12 @@ static void kernel_memmove(int nthreads, size_t objsize)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 #ifndef NDEBUG
 
@@ -229,7 +252,7 @@ int main(int argc, const char *argv[])
 
 #endif
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }

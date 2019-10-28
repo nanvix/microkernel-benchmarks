@@ -25,8 +25,8 @@
 #ifndef _KBENCH_H_
 #define _KBENCH_H_
 
-	#include <nanvix.h>
-	#include <stdint.h>
+	#include <posix/stdint.h>
+	#include <nanvix/kernel/kernel.h>
 
 	/**
 	 * @brief Number of benchmark iterations.
@@ -46,12 +46,6 @@
 	 * @brief Casts something to a uint32_t.
 	 */
 	#define UINT32(x) ((uint32_t)((x) & 0xffffffff))
-
-	/**
-	 * @brief An horizontal line.
-	 */
-	#define HLINE "--------------------------------------------------------------------------------\n"
-
 
 /*============================================================================*
  * Memory Functions                                                           *

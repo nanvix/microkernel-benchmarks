@@ -22,8 +22,9 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <nanvix.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/ulib.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
 /**
@@ -33,9 +34,15 @@
 #define NTHREADS_MIN                1  /**< Minimum Number of Worker Threads      */
 #define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Worker Threads      */
 #define NTHREADS_STEP               1  /**< Increment on Number of Worker Threads */
-#define FLOPS                 (10008) /**< Number of Floating Point Operations   */
-#define NIOOPS                  (100) /**< Number of Floating Point Operations   */
+#define FLOPS                 (10008)  /**< Number of Floating Point Operations   */
+#define NIOOPS                  (100)  /**< Number of Floating Point Operations   */
 /**@}*/
+
+/**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
 
 /**
  * @name Benchmark Kernel Parameters
@@ -47,8 +54,13 @@ static char *NOISE = "y"; /**< Noise On?                */
 /**@}*/
 
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
+
+/**
+ * @brief Name of the benchmark.
+ */
+#define BENCHMARK_NAME "noise"
 
 /**
  * @brief Number of events to profile.
@@ -57,6 +69,8 @@ static char *NOISE = "y"; /**< Noise On?                */
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
 	#define BENCHMARK_PERF_EVENTS 5
+#else
+	#define BENCHMARK_PERF_EVENTS 1
 #endif
 
 /**
@@ -64,19 +78,21 @@ static char *NOISE = "y"; /**< Noise On?                */
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 #if defined(__mppa256__)
-	PERF_CYCLES,
-	PERF_ICACHE_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_REG_STALLS,
+	PERF_DTLB_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS
-#elif defined(__optimsoc__)
-	PERF_CYCLES,
+	PERF_REG_STALLS,
 	PERF_BRANCH_STALLS,
-	PERF_ICACHE_STALLS,
 	PERF_DCACHE_STALLS,
-	PERF_REG_STALLS
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#elif defined(__optimsoc__)
+	PERF_REG_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#else
+	0
 #endif
 };
 
@@ -84,30 +100,36 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @brief Dump execution statistics.
  *
  * @param it    Benchmark iteration.
+ * @oaram name  Benchmark name.
  * @param stats Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *stats)
+static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
-
-	spinlock_lock(&lock);
-
-		printf("%s %d %s %d %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][noise]",
-			it,
-			NOISE,
-			NWORKERS,
-			NIDLE,
-			UINT32(stats[0]),
-			UINT32(stats[1]),
-			UINT32(stats[2]),
-			UINT32(stats[3]),
-			UINT32(stats[4]),
-			UINT32(stats[5]),
-			UINT32(stats[6])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf(
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d %d %d",
+#elif (BENCHMARK_PERF_EVENTS >= 5)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s] %d %s %d %d %d",
+#endif
+		name,
+		it,
+		NOISE,
+		NWORKERS,
+		NIDLE,
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		UINT32(stats[6]),
+		UINT32(stats[5]),
+#endif
+#if (BENCHMARK_PERF_EVENTS >= 5)
+		UINT32(stats[4]),
+		UINT32(stats[3]),
+		UINT32(stats[2]),
+		UINT32(stats[1]),
+#endif
+		UINT32(stats[0])
+	);
 }
 
 /*============================================================================*
@@ -152,7 +174,7 @@ static void *task_worker(void *arg)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, stats);
+			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, stats);
 	}
 
 	/* Avoid compiler optimizations. */
@@ -173,7 +195,7 @@ static void *task_idle(void *arg)
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
 			for (int k = 0; k < NIOOPS; k++)
-				syscall0(NR_SYSCALLS);
+				kcall0(NR_SYSCALLS);
 		}
 	}
 
@@ -230,12 +252,12 @@ static void benchmark_noise(int nworkers, int nidle)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 #ifndef NDEBUG
 
@@ -254,7 +276,7 @@ int main(int argc, const char *argv[])
 
 #endif
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }

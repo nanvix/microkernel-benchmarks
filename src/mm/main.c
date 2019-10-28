@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
+#include <nanvix/ulib.h>
 #include <nanvix.h>
 #include <stdint.h>
 #include <kbench.h>
@@ -45,7 +45,7 @@ static int NTHREADS; /**< Number of Working Threads */
 /**@}*/
 
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
 
 /**

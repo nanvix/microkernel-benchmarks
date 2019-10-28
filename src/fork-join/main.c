@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <nanvix.h>
-#include <stdint.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/ulib.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
 /**
@@ -37,6 +37,12 @@
 /**@}*/
 
 /**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
+
+/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -44,8 +50,13 @@ static int NTHREADS; /**< Number of Working Threads */
 /**@}*/
 
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
+
+/**
+ * @brief Name of the benchmark.
+ */
+#define BENCHMARK_NAME "fork-join"
 
 /**
  * @brief Number of events to profile.
@@ -54,6 +65,8 @@ static int NTHREADS; /**< Number of Working Threads */
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
 	#define BENCHMARK_PERF_EVENTS 5
+#else
+	#define BENCHMARK_PERF_EVENTS 1
 #endif
 
 /**
@@ -61,63 +74,83 @@ static int NTHREADS; /**< Number of Working Threads */
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 #if defined(__mppa256__)
-	PERF_CYCLES,
-	PERF_ICACHE_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_REG_STALLS,
+	PERF_DTLB_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS
-#elif defined(__optimsoc__)
-	PERF_CYCLES,
+	PERF_REG_STALLS,
 	PERF_BRANCH_STALLS,
-	PERF_ICACHE_STALLS,
 	PERF_DCACHE_STALLS,
-	PERF_REG_STALLS
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#elif defined(__optimsoc__)
+	PERF_REG_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#else
+	0
 #endif
 };
 
 /**
  * @brief Dump execution statistics.
  *
- * @param it    Benchmark iteration.
- * @param stats Execution statistics.
+ * @param it         Benchmark iteration.
+ * @oaram name       Benchmark name.
+ * @param fork_stats Fork statistics.
+ * @param join_stats Join statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *fork_stats, uint64_t *join_stats)
+static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats, uint64_t *join_stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
+	uprintf(
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d %d",
+#elif (BENCHMARK_PERF_EVENTS >= 5)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s] %d %s %d %d",
+#endif
+		name,
+		it,
+		"f",
+		NTHREADS,
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		UINT32(fork_stats[6]),
+		UINT32(fork_stats[5]),
+#endif
+#if (BENCHMARK_PERF_EVENTS >= 5)
+		UINT32(fork_stats[4]),
+		UINT32(fork_stats[3]),
+		UINT32(fork_stats[2]),
+		UINT32(fork_stats[1]),
+#endif
+		UINT32(fork_stats[0])
+	);
 
-	spinlock_lock(&lock);
-
-		printf("%s %d %s %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][fork-join]",
-			it,
-			"f",
-			NTHREADS,
-			UINT32(fork_stats[0]),
-			UINT32(fork_stats[1]),
-			UINT32(fork_stats[2]),
-			UINT32(fork_stats[3]),
-			UINT32(fork_stats[4]),
-			UINT32(fork_stats[5]),
-			UINT32(fork_stats[6])
-		);
-
-		printf("%s %d %s %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][fork-join]",
-			it,
-			"j",
-			NTHREADS,
-			UINT32(join_stats[0]),
-			UINT32(join_stats[1]),
-			UINT32(join_stats[2]),
-			UINT32(join_stats[3]),
-			UINT32(join_stats[4]),
-			UINT32(join_stats[5]),
-			UINT32(join_stats[6])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf(
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d %d",
+#elif (BENCHMARK_PERF_EVENTS >= 5)
+		"[benchmarks][%s] %d %s %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s] %d %s %d %d",
+#endif
+		name,
+		it,
+		"j",
+		NTHREADS,
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		UINT32(join_stats[6]),
+		UINT32(join_stats[5]),
+#endif
+#if (BENCHMARK_PERF_EVENTS >= 5)
+		UINT32(join_stats[4]),
+		UINT32(join_stats[3]),
+		UINT32(join_stats[2]),
+		UINT32(join_stats[1]),
+#endif
+		UINT32(join_stats[0])
+	);
 }
 
 /*============================================================================*
@@ -174,7 +207,7 @@ void kernel_fork_join(int nthreads)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, fork_stats, join_stats);
+			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, fork_stats, join_stats);
 	}
 }
 
@@ -188,12 +221,12 @@ void kernel_fork_join(int nthreads)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 #ifndef NDEBUG
 
@@ -206,7 +239,7 @@ int main(int argc, const char *argv[])
 
 #endif
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }
