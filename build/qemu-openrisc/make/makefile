@@ -26,7 +26,12 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __qemu_openrisc__ # Target
+export TARGET    ?= qemu-openrisc
+export PROCESSOR := or1k-processor
+export CLUSTER   := or1k-cluster
+export CORE      := or1k
+
+export CFLAGS := -D __qemu_openrisc__ # Target
 export CFLAGS += -D __openrisc__      # Processor
 export CFLAGS += -D __or1k_cluster__  # Cluster
 export CFLAGS += -D __or1k__          # Core
@@ -37,39 +42,47 @@ export CFLAGS += -D __or1200__        # Core Variant
 #===============================================================================
 
 # Toolchain Directory
-export TOOLCHAIN_DIR ?= $(UTILSDIR)/toolchain/or1k/bin/
+export TOOLCHAIN_DIR ?= $(TOOLSDIR)/toolchain/or1k/bin/
 
 # Toolchain
-export CC = $(TOOLCHAIN_DIR)/or1k-elf-gcc
-export LD = $(TOOLCHAIN_DIR)/or1k-elf-ld
-export AR = $(TOOLCHAIN_DIR)/or1k-elf-ar
+export CC := $(TOOLCHAIN_DIR)/or1k-elf-gcc
+export LD := $(TOOLCHAIN_DIR)/or1k-elf-ld
+export AR := $(TOOLCHAIN_DIR)/or1k-elf-ar
+
+# Timeout Variable
+export TIMEOUT ?= 120
 
 # Compiler Options
-export CFLAGS += -D __HAS_HW_DIVISION
+export CFLAGS += -nostdlib -nostdinc -ffreestanding
+export CFLAGS += -ansi -pedantic-errors
 export CFLAGS += -Wstack-usage=4096
-export CFLAGS += -nostdlib -nostdinc
-export CFLAGS += -Wno-error=type-limits
 export CFLAGS += -Wno-type-limits
-export CFLAGS += -I $(INCDIR)/posix
+export CFLAGS += -D __HAS_HW_DIVISION
 
 # Linker Options
-export LDFLAGS  += -nostdlib -nostdinc
+export LDFLAGS := -nostdlib -nostdinc -ffreestanding
+export LDFLAGS += -Wl,--allow-multiple-definition
 
 # Suffix for Objects
-export OBJ_SUFFIX=qemu-openrisc
+export OBJ_SUFFIX := qemu-openrisc
 
 #===============================================================================
 # Libraries
 #===============================================================================
 
 export THEIR_LIBS := -lgcc
+export LIBLWIP := liblwip-qemu-openrisc.a
 
 #===============================================================================
 
 # Builds everything.
-all-target:
-	$(MAKE) -C $(SRCDIR) all
+all-target: make-dirs
+	@$(MAKE) -C $(SRCDIR) all
+
+# Cleans object files.
+clean-target:
+	@$(MAKE) -C $(SRCDIR) clean
 
 # Cleans everything.
-clean-target:
-	$(MAKE) -C $(SRCDIR) clean
+distclean-target:
+	@$(MAKE) -C $(SRCDIR) distclean

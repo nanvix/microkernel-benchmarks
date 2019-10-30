@@ -22,27 +22,38 @@
 # SOFTWARE.
 #
 
-# Default Benchmark Kernel
-export KERNEL ?= perf
-
-# ELF Binary
-ELFBIN := $(KERNEL)
-
-# Image Binary
-export IMAGE := $(IMGDIR)/$(KERNEL).img
+# Runs Unit Tests in all clusters
+run:
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) all --no-debug
 
 # Runs Unit Tests in IO Cluster.
 run-iocluster:
-	bash $(UTILSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(ELFBIN) $(TARGET) iocluster --no-debug
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) iocluster --no-debug
 
 # Runs Unit Tests in Compute Cluster.
 run-ccluster:
-	bash $(UTILSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(ELFBIN) $(TARGET) ccluster --no-debug
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) ccluster --no-debug
+
+# Runs Unit Tests in all clusters with a timeout.
+test:
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) all --no-debug $(TIMEOUT)
+
+# Runs Unit Tests in Compute Cluster with a timeout.
+test-ccluster:
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) ccluster --no-debug $(TIMEOUT)
+
+# Runs Unit Tests in IO Cluster with a Timeout.
+test-iocluster:
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) iocluster --no-debug $(TIMEOUT)
+
+# Runs Unit Tests in all clusters in debug mode.
+debug:
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) all --debug
 
 # Runs Unit Tests in IO Cluster in debug mode.
 debug-iocluster:
-	bash $(UTILSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(ELFBIN) $(TARGET) iocluster --debug
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) iocluster --debug
 
 # Runs Unit Tests in Compute Cluster in debug mode.
 debug-ccluster:
-	bash $(UTILSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(ELFBIN) $(TARGET) ccluster --debug
+	bash $(TOOLSDIR)/nanvix-run.sh $(IMAGE) $(BINDIR) $(TARGET) ccluster --debug

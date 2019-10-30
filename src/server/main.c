@@ -22,8 +22,11 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <nanvix.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/sys/mutex.h>
+#include <nanvix/sys/semaphore.h>
+#include <nanvix/ulib.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
 /**
@@ -38,6 +41,12 @@
 /**@}*/
 
 /**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
+
+/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -47,6 +56,11 @@ static int NWORKERS; /**< Number of Worker Threads */
 /*============================================================================*
  * Profilling                                                                 *
  *============================================================================*/
+
+/**
+ * @brief Name of the benchmark.
+ */
+#define BENCHMARK_NAME "server"
 
 /**
  * @brief Number of events to profile.
@@ -64,23 +78,18 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @brief Dump execution statistics.
  *
  * @param it    Benchmark iteration.
+ * @oaram name  Benchmark name.
  * @param stats Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *stats)
+static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
-
-	spinlock_lock(&lock);
-
-		printf("%s %d %d %d %d\n",
-			"[benchmarks][server]",
-			it,
-			NWORKERS,
-			NREQUESTS,
-			UINT32(stats[0])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf("[benchmarks][%s] %d %d %d %d",
+		name,
+		it,
+		NWORKERS,
+		NREQUESTS,
+		UINT32(stats[0])
+	);
 }
 
 /*============================================================================*
@@ -249,7 +258,7 @@ static void server(int nworkers, int nrequests)
 			stats = perf_read(0);
 
 			if (k >= SKIP)
-				benchmark_dump_stats(k - SKIP, &stats);
+				benchmark_dump_stats(k - SKIP, BENCHMARK_NAME, &stats);
 		}
 
 	server_shutdown();
@@ -265,12 +274,12 @@ static void server(int nworkers, int nrequests)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 #ifndef NDEBUG
 
@@ -283,7 +292,7 @@ int main(int argc, const char *argv[])
 
 #endif
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }

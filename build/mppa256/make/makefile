@@ -26,7 +26,12 @@
 # Target Configuration
 #===============================================================================
 
-export CFLAGS  = -D __mppa256__ # Target
+export TARGET    ?= mppa256
+export PROCESSOR := bostan
+export CLUSTER   := k1b-cluster
+export CORE      := k1b
+
+export CFLAGS := -D __mppa256__ # Target
 export CFLAGS += -D __bostan__  # Processor
 export CFLAGS += -D __k1b__     # Cluster and Core
 
@@ -38,23 +43,26 @@ export CFLAGS += -D __k1b__     # Cluster and Core
 export TOOLCHAIN_DIR ?= /usr/local/k1tools
 
 # Toolchain
-export CC = $(TOOLCHAIN_DIR)/bin/k1-gcc
-export LD = $(TOOLCHAIN_DIR)/bin/k1-gcc
-export AR = $(TOOLCHAIN_DIR)/bin/k1-ar
+export CC := $(TOOLCHAIN_DIR)/bin/k1-gcc
+export LD := $(TOOLCHAIN_DIR)/bin/k1-gcc
+export AR := $(TOOLCHAIN_DIR)/bin/k1-ar
+
+# Timeout Variable
+export TIMEOUT ?= 120
 
 # Compiler Options
-export CFLAGS += -D __HAS_HW_DIVISION
 export CFLAGS += -mos=bare -march=k1b -mboard=developer
-export CFLAGS += -I $(INCDIR)/posix
+export CFLAGS += -D __HAS_HW_DIVISION
 
 # Linker Options
-export LDFLAGS = -Wl,--allow-multiple-definition
+export LDFLAGS := -Wl,--allow-multiple-definition
 
 #===============================================================================
 # Libraries
 #===============================================================================
 
-export THEIR_LIBS = -lvbsp -lmppanoc -lmpparouting -mhypervisor
+export THEIR_LIBS := -lvbsp -mhypervisor
+export LIBLWIP :=
 
 #===============================================================================
 
@@ -67,33 +75,35 @@ all-k1bdp:
 		CFLAGS="$(CFLAGS) -D __k1bdp__ -mcluster=node" \
 		LDFLAGS="$(LDFLAGS) -mcluster=node"            \
 		LINKERDIR=$(BUILDDIR)/mppa256/linker/k1bdp     \
-		LIBHAL=$(LIBDIR)/libhal-k1b-node.a             \
-		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a       \
-		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a       \
-		LIBC=$(LIBDIR)/libc-mppa256-node.a             \
+		LIBC=libc-k1bdp.a                              \
+		LIBNAVNIX=libnanvix-k1bdp.a                    \
+		LIBKERNEL=libkernel-k1bdp.a                    \
+		LIBHAL=libhal-k1bdp.a                          \
+		BARELIB=barelib-k1bdp.a                        \
 		OBJ_SUFFIX=k1bdp
 
-# Builds everything for node ioddr variant.
+# Builds everything for ioddr node variant.
 all-k1bio:
 	@$(MAKE) -C $(SRCDIR) all                           \
 		CFLAGS="$(CFLAGS) -D __k1bio__ -mcluster=ioddr" \
 		LDFLAGS="$(LDFLAGS) -mcluster=ioddr"            \
 		LINKERDIR=$(BUILDDIR)/mppa256/linker/k1bio      \
-		LIBHAL=$(LIBDIR)/libhal-k1b-ioddr.a             \
-		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a       \
-		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a       \
-		LIBC=$(LIBDIR)/libc-mppa256-ioddr.a             \
+		LIBC=libc-k1bio.a                               \
+		LIBNANVIX=libnanvix-k1bio.a                     \
+		LIBKERNEL=libkernel-k1bio.a                     \
+		LIBHAL=libhal-k1bio.a                           \
+		BARELIB=barelib-k1bio.a                         \
 		OBJ_SUFFIX=k1bio
 
 # Cleans object files.
-clean-target: clean-k1bio clean-k1bdp
+clean-target: clean-k1bdp clean-k1bio
 
 # Cleans object files for node cluster variant.
 clean-k1bdp:
 	@$(MAKE) -C $(SRCDIR) clean \
 		OBJ_SUFFIX=k1bdp
 
-# Cleans object files for node ioddr variant.
+# Cleans object files for ioddr node variant.
 clean-k1bio:
 	@$(MAKE) -C $(SRCDIR) clean \
 		OBJ_SUFFIX=k1bio
@@ -102,17 +112,21 @@ clean-k1bio:
 distclean-target: distclean-k1bdp distclean-k1bio
 
 # Cleans everything for node cluster variant.
-distclean-k1bdp: clean-target
-	@$(MAKE) -C $(SRCDIR) distclean              \
-		LIBKERNEL=$(LIBDIR)/libkernel-k1b-node.a \
-		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-node.a \
-		LIBC=$(LIBDIR)/libc-k1b-node.a           \
+distclean-k1bdp: clean-k1bdp
+	@$(MAKE) -C $(SRCDIR) distclean   \
+		LIBC=libc-k1bdp.a             \
+		LIBNANVIX=libnanvix-k1bdp.a   \
+		LIBKERNEL=libkernel-k1bdp.a   \
+		LIBHAL=libhal-k1bdp.a         \
+		BARELIB=barelib-k1bdp.a       \
 		OBJ_SUFFIX=k1bdp
 
-# Cleans everything for node ioddr variant.
-distclean-k1bio: clean-target
-	@$(MAKE) -C $(SRCDIR) distclean               \
-		LIBKERNEL=$(LIBDIR)/libkernel-k1b-ioddr.a \
-		LIBNANVIX=$(LIBDIR)/libnanvix-k1b-ioddr.a \
-		LIBC=$(LIBDIR)/libc-k1b-ioddr.a           \
+# Cleans everything for ioddr variant.
+distclean-k1bio: clean-k1bio
+	@$(MAKE) -C $(SRCDIR) distclean   \
+		LIBC=libc-k1bio.a             \
+		LIBNANVIX=libnanvix-k1bio.a   \
+		LIBKERNEL=libkernel-k1bio.a   \
+		LIBHAL=libhal-k1bio.a         \
+		BARELIB=barelib-k1bio.a       \
 		OBJ_SUFFIX=k1bio

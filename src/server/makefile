@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
+# Copyright(c) 2011-2019 The Maintainers of Nanvix
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,27 @@
 #
 
 #===============================================================================
+# Toolchain Configuration
+#===============================================================================
+
+# Compiler Options
+ifneq ($(LIBLWIP),)
+CFLAGS += -I $(INCDIR)/posix
+endif
+
+# Libraries
+LIBS := -Wl,--whole-archive
+LIBS += $(LIBDIR)/$(LIBHAL)
+LIBS += $(LIBDIR)/$(LIBKERNEL)
+LIBS += -Wl,--no-whole-archive
+LIBS += $(LIBDIR)/$(LIBC)
+LIBS += $(LIBDIR)/$(LIBNANVIX)
+ifneq ($(LIBLWIP),)
+LIBS += $(LIBDIR)/$(LIBLWIP)
+endif
+LIBS += $(LIBDIR)/$(BARELIB) $(THEIR_LIBS)
+
+#===============================================================================
 # Sources, Objects and Binary
 #===============================================================================
 
@@ -33,17 +54,38 @@ SRC += $(wildcard *.c)
 OBJ += $(SRC:.c=.$(OBJ_SUFFIX).o)
 
 # Binary File
-ELFBIN = server-$(OBJ_SUFFIX)
+ELFBIN = server.$(OBJ_SUFFIX)
+
+# Image Source
+IMGSRC = $(IMGDIR)/server-$(TARGET).img
+
+# Image Name
+IMAGE = $(ROOTDIR)/server.img
 
 #===============================================================================
 
-# Builds All Object Files
-all: $(OBJ)
-ifeq ($(VERBOSE), no)
-	@echo [CC] $(BINDIR)/$(ELFBIN)
-	@$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
+ifeq ($(TARGET),unix64)
+LINKER_SCRIPT=
 else
-	$(CC) $(LDFLAGS) -L $(LINKERDIR)/ -T link.ld -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
+LINKER_SCRIPT = -L $(LINKERDIR)/ -T link.ld
+endif
+
+# Builds everything.
+all: binary
+
+# Builds multibinary image.
+image:
+	@ln -s $(BINDIR)
+	@bash $(TOOLSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(IMGSRC)
+	@rm bin
+
+# Builds binary.
+binary: $(OBJ)
+ifeq ($(VERBOSE), no)
+	@echo [CC] $(ELFBIN)
+	@$(CC) $(LDFLAGS) $(LINKER_SCRIPT) -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
+else
+	$(CC) $(LDFLAGS) $(LINKER_SCRIPT) -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
 endif
 
 # Cleans All Object Files
@@ -58,13 +100,13 @@ endif
 # Cleans Everything
 distclean: clean
 ifeq ($(VERBOSE), no)
-	@echo [CLEAN] $(BINDIR)/$(ELFBIN)
+	@echo [CLEAN] $(ELFBIN)
 	@rm -rf $(BINDIR)/$(ELFBIN)
 else
-	rm -rf $(BINDIR)/$(ELFBIN))
+	rm -rf $(BINDIR)/$(ELFBIN)
 endif
 
-# Builds a C Source file
+# Builds a C source file.
 %.$(OBJ_SUFFIX).o: %.c
 ifeq ($(VERBOSE), no)
 	@echo [CC] $@

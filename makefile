@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
+# Copyright(c) 2011-2019 The Maintainers of Nanvix
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,11 @@
 # SOFTWARE.
 #
 
+#
+# Default make rule.
+#
+.DEFAULT_GOAL := all
+
 #===============================================================================
 # Build Options
 #===============================================================================
@@ -30,35 +35,40 @@
 export VERBOSE ?= no
 
 # Release Version?
-export RELEASE ?= false
+export RELEASE ?= no
+
+# Installation Prefix
+export PREFIX ?= $(HOME)
+
+export ADDONS ?=
 
 #===============================================================================
 # Directories
 #===============================================================================
 
-# Directories
 export ROOTDIR    := $(CURDIR)
 export BINDIR     := $(ROOTDIR)/bin
 export BUILDDIR   := $(ROOTDIR)/build
 export CONTRIBDIR := $(ROOTDIR)/contrib
-export LINKERDIR  := $(BUILDDIR)/$(TARGET)/linker
-export MAKEDIR    := $(BUILDDIR)/$(TARGET)/make
 export DOCDIR     := $(ROOTDIR)/doc
 export IMGDIR     := $(ROOTDIR)/img
 export INCDIR     := $(ROOTDIR)/include
 export LIBDIR     := $(ROOTDIR)/lib
+export LINKERDIR  := $(BUILDDIR)/$(TARGET)/linker
+export MAKEDIR    := $(BUILDDIR)/$(TARGET)/make
 export SRCDIR     := $(ROOTDIR)/src
-export UTILSDIR   := $(ROOTDIR)/utils
+export TOOLSDIR   := $(ROOTDIR)/utils
 
 #===============================================================================
 # Libraries and Binaries
 #===============================================================================
 
 # Libraries
-export LIBHAL    = $(LIBDIR)/libhal-$(TARGET).a
-export LIBKERNEL = $(LIBDIR)/libkernel-$(TARGET).a
-export LIBNANVIX = $(LIBDIR)/libnanvix-$(TARGET).a
-export LIBC      = $(LIBDIR)/libc-$(TARGET).a
+export BARELIB    := barelib-$(TARGET).a
+export LIBHAL     := libhal-$(TARGET).a
+export LIBKERNEL  := libkernel-$(TARGET).a
+export LIBNANVIX  := libnanvix-$(TARGET).a
+export LIBC       := libc-$(TARGET).a
 
 #===============================================================================
 # Target-Specific Make Rules
@@ -72,14 +82,16 @@ include $(MAKEDIR)/makefile
 
 # Compiler Options
 export CFLAGS += -std=c99 -fno-builtin
-export CFLAGS += -pedantic-errors
 export CFLAGS += -Wall -Wextra -Werror -Wa,--warn
 export CFLAGS += -Winit-self -Wswitch-default -Wfloat-equal
 export CFLAGS += -Wundef -Wshadow -Wuninitialized -Wlogical-op
-export CFLAGS += -Wno-unused-function
-export CFLAGS += -fno-stack-protector
 export CFLAGS += -Wvla # -Wredundant-decls
+export CFLAGS += -Wno-missing-profile
+export CFLAGS += -fno-stack-protector
+export CFLAGS += -Wno-unused-function
 export CFLAGS += -I $(INCDIR)
+export CFLAGS += -I $(ROOTDIR)/src/lwip/src/include
+export CFLAGS += $(ADDONS)
 
 # Additional C Flags
 include $(BUILDDIR)/makefile.cflags
@@ -89,27 +101,28 @@ export ARFLAGS = rc
 
 #===============================================================================
 
-# Builds Everything
-all: images
+#
+# Default image
+#
+export IMAGE ?= kcall-local.img
+
+# Builds everything.
+all: | make-dirs image
+
+# Builds multibinary image.
+image: all-target
+	@$(MAKE) -C $(SRCDIR) image
 
 # Make Directories
 make-dirs:
-	@mkdir -p $(INCDIR)
-	@mkdir -p $(IMGDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(LIBDIR)
 
-# Build Binary Images
-images: | make-dirs all-target
-	@$(MAKE) -C $(SRCDIR) images
-
-# Cleans builds.
+# Cleans build.
 clean: clean-target
 
 # Cleans everything.
-distclean: | clean-target
-	 @rm -f $(BINDIR)/*
-	 @find $(SRCDIR) -name "*.o" -exec rm -rf {} \;
+distclean: distclean-target
 
 #===============================================================================
 # Contrib Install and Uninstall Rules

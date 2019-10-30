@@ -22,10 +22,12 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <sys/types.h>
-#include <nanvix.h>
-#include <stdint.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/sys/semaphore.h>
+#include <nanvix/sys/mutex.h>
+#include <nanvix/ulib.h>
+#include <posix/sys/types.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
 /**
@@ -43,6 +45,12 @@
 /**@}*/
 
 /**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
+
+/**
  * @name Benchmark Kernel Parameters
  */
 /**@{*/
@@ -51,7 +59,7 @@ static size_t OBJSIZE; /**< Object Size               */
 /**@}*/
 
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
 
 /**
@@ -65,22 +73,16 @@ static size_t OBJSIZE; /**< Object Size               */
  */
 static inline void benchmark_dump_stats(int it, const char *type, int nobjs, size_t objsize, uint64_t *stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
-
-	spinlock_lock(&lock);
-
-		printf("%s %d %s %d %d %d %d %d\n",
-			"[benchmarks][buffer]",
-			it,
-			type,
-			NTHREADS,
-			nobjs,
-			objsize,
-			UINT32(stats[0]),
-			UINT32(stats[1])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf("%s %d %s %d %d %d %d %d",
+		"[benchmarks][buffer]",
+		it,
+		type,
+		NTHREADS,
+		nobjs,
+		objsize,
+		UINT32(stats[0]),
+		UINT32(stats[1])
+	);
 }
 
 /*============================================================================*
@@ -272,12 +274,12 @@ static void kernel_buffer(int nthreads, size_t objsize)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 #ifndef NDEBUG
 
@@ -293,7 +295,7 @@ int main(int argc, const char *argv[])
 
 #endif
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }

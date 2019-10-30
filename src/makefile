@@ -1,7 +1,7 @@
 #
 # MIT License
 #
-# Copyright(c) 2018 Pedro Henrique Penna <pedrohenriquepenna@gmail.com>
+# Copyright(c) 2011-2019 The Maintainers of Nanvix
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,30 +23,25 @@
 #
 
 #===============================================================================
-# Toolchain Configuration
-#===============================================================================
-
-# Libraries
-export LIBS  = -Wl,--whole-archive $(LIBC) $(LIBNANVIX) $(LIBKERNEL) $(LIBHAL)
-export LIBS += -Wl,--no-whole-archive $(THEIR_LIBS)
-
-#===============================================================================
 # Generic Rules
 #===============================================================================
 
 # Builds Binary Files
-all: all-buffer all-fork-join all-gf all-kcall-local all-kcall-remote all-mm \
-all-noise all-perf all-server all-stream all-tsp all-upcall
+all: all-buffer all-fork-join all-kcall-local all-kcall-remote all-noise \
+		all-perf all-server all-stream all-upcall
 
 # Cleans Object Files
-clean: clean-buffer clean-fork-join clean-gf clean-kcall-local \
-clean-kcall-remote clean-mm clean-noise clean-perf clean-server clean-stream \
-clean-tsp clean-upcall
+clean: clean-buffer clean-fork-join clean-kcall-local clean-kcall-remote \
+		clean-noise clean-perf clean-server clean-stream clean-upcall
 
-# Builds Binary Image Files
-images: image-buffer image-fork-join image-gf image-kcall-local \
-image-kcall-remote image-mm image-noise image-perf image-server image-stream \
-image-tsp image-upcall
+# Cleans Everything
+distclean: distclean-buffer distclean-fork-join distclean-kcall-local \
+		distclean-kcall-remote distclean-noise distclean-perf \
+		distclean-server distclean-stream distclean-upcall
+
+# Builds multibinary images
+image: image-buffer image-fork-join image-kcall-local image-kcall-remote \
+		image-noise image-perf image-server image-stream image-upcall
 
 #===============================================================================
 # buffer
@@ -60,9 +55,13 @@ all-buffer:
 clean-buffer:
 	@$(MAKE) -C buffer clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-buffer:
+	@$(MAKE) -C buffer distclean
+
+# Builds multibinary image.
 image-buffer:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/buffer.img $(BINDIR) buffer
+	@$(MAKE) -C buffer image
 
 #===============================================================================
 # fork-join
@@ -76,25 +75,13 @@ all-fork-join:
 clean-fork-join:
 	@$(MAKE) -C fork-join clean
 
-# Build Buffer Benchmark Binary Image
-image-fork-join:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/fork-join.img $(BINDIR) fork-join
-
-#===============================================================================
-# gf
-#===============================================================================
-
-# Builds gf.
-all-gf:
-	@$(MAKE) -C gf all
-
 # Cleans object files.
-clean-gf:
-	@$(MAKE) -C gf clean
+distclean-fork-join:
+	@$(MAKE) -C fork-join distclean
 
-# Build Buffer Benchmark Binary Image
-image-gf:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/gf.img $(BINDIR) gf
+# Builds multibinary image.
+image-fork-join:
+	@$(MAKE) -C fork-join image
 
 #===============================================================================
 # kcall-local
@@ -108,9 +95,13 @@ all-kcall-local:
 clean-kcall-local:
 	@$(MAKE) -C kcall-local clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-kcall-local:
+	@$(MAKE) -C kcall-local distclean
+
+# Builds multibinary image.
 image-kcall-local:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/kcall-local.img $(BINDIR) kcall-local
+	@$(MAKE) -C kcall-local image
 
 #===============================================================================
 # kcall-remote
@@ -124,25 +115,13 @@ all-kcall-remote:
 clean-kcall-remote:
 	@$(MAKE) -C kcall-remote clean
 
-# Build Buffer Benchmark Binary Image
-image-kcall-remote:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/kcall-remote.img $(BINDIR) kcall-remote
-
-#===============================================================================
-# mm
-#===============================================================================
-
-# Builds mm.
-all-mm:
-	@$(MAKE) -C mm all
-
 # Cleans object files.
-clean-mm:
-	@$(MAKE) -C mm clean
+distclean-kcall-remote:
+	@$(MAKE) -C kcall-remote distclean
 
-# Build Buffer Benchmark Binary Image
-image-mm:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/mm.img $(BINDIR) mm
+# Builds multibinary image.
+image-kcall-remote:
+	@$(MAKE) -C kcall-remote image
 
 #===============================================================================
 # noise
@@ -156,9 +135,13 @@ all-noise:
 clean-noise:
 	@$(MAKE) -C noise clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-noise:
+	@$(MAKE) -C noise distclean
+
+# Builds multibinary image.
 image-noise:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/noise.img $(BINDIR) noise
+	@$(MAKE) -C noise image
 
 #===============================================================================
 # perf
@@ -172,9 +155,13 @@ all-perf:
 clean-perf:
 	@$(MAKE) -C perf clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-perf:
+	@$(MAKE) -C perf distclean
+
+# Builds multibinary image.
 image-perf:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/perf.img $(BINDIR) perf
+	@$(MAKE) -C perf image
 
 #===============================================================================
 # server
@@ -188,9 +175,13 @@ all-server:
 clean-server:
 	@$(MAKE) -C server clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-server:
+	@$(MAKE) -C server distclean
+
+# Builds multibinary image.
 image-server:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/server.img $(BINDIR) server
+	@$(MAKE) -C server image
 
 #===============================================================================
 # stream
@@ -204,9 +195,13 @@ all-stream:
 clean-stream:
 	@$(MAKE) -C stream clean
 
-# Build Buffer Benchmark Binary Image
+# Cleans object files.
+distclean-stream:
+	@$(MAKE) -C stream distclean
+
+# Builds multibinary image.
 image-stream:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/stream.img $(BINDIR) stream
+	@$(MAKE) -C stream image
 
 #===============================================================================
 # upcall
@@ -220,22 +215,10 @@ all-upcall:
 clean-upcall:
 	@$(MAKE) -C upcall clean
 
-# Build Buffer Benchmark Binary Image
-image-upcall:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/upcall.img $(BINDIR) upcall
-
-#===============================================================================
-# tsp
-#===============================================================================
-
-# Builds tsp.
-all-tsp:
-	@$(MAKE) -C tsp all
-
 # Cleans object files.
-clean-tsp:
-	@$(MAKE) -C tsp clean
+distclean-upcall:
+	@$(MAKE) -C upcall distclean
 
-# Build Buffer Benchmark Binary Image
-image-tsp:
-	bash $(UTILSDIR)/nanvix-build-image.sh $(IMGDIR)/tsp.img $(BINDIR) tsp
+# Builds multibinary image.
+image-upcall:
+	@$(MAKE) -C upcall image

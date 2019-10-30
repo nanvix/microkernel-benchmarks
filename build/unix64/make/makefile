@@ -1,5 +1,4 @@
 #
-#
 # MIT License
 #
 # Copyright(c) 2011-2019 The Maintainers of Nanvix
@@ -29,38 +28,57 @@
 
 export TARGET    ?= unix64
 export PROCESSOR := linux64
+export CLUSTER   := linux64-cluster
+export CORE      := linux64-core
+
+export CFLAGS := -D __unix64__            # Target
+export CFLAGS += -D __linux64_processor__ # Processor
+export CFLAGS += -D __linux64_cluster__   # Cluster
+export CFLAGS += -D __linux64_core__      # Core
 
 #===============================================================================
 # Toolchain Configuration
 #===============================================================================
 
 # Toolchain Directory
-export TOOLCHAIN_DIR ?= $(TOOLSDIR)/dev/toolchain/unix/bin
+export TOOLCHAIN_DIR ?= $(TOOLSDIR)/toolchain/unix/bin
 
 # Toolchain
-export CC = gcc
-export LD = ld
-export AR = ar
+export CC := gcc
+export LD := ld
+export AR := ar
+
+# Timeout Variable
+export TIMEOUT ?= 60
 
 # Compiler Options
-export CFLAGS  = -D __unix64__ -D__linux64__
-#export CFLAGS += -nostdlib -nostdinc
-export CFLAGS += -ansi # -pedantic-errors
+export CFLAGS += -D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L
+export CFLAGS += -ansi -Wno-error=pedantic
 export CFLAGS += -Wstack-usage=4096
 export CFLAGS += -D __HAS_HW_DIVISION
-#export CFLAGS += -D __INTERFACE_CHECK_CORE_AL
-#export CFLAGS += -D __INTERFACE_CHECK_CLUSTER_AL
-#export CFLAGS += -D __INTERFACE_CHECK_PROCESSOR_AL
-#export CFLAGS += -D __INTERFACE_CHECK_TARGET_AL
 
 # Linker Options
-export LDFLAGS =
+export LDFLAGS :=
+
+# Suffix for Objects
+export OBJ_SUFFIX := unix64
 
 #===============================================================================
-# Libraries and Binaries
-#===============================================================================
-
 # Libraries
-export LIBKERNEL = libhal-$(TARGET).a
-export LIBS = $(LIBDIR)/$(LIBKERNEL)
-export LIB_THEIRS = -lpthread
+#===============================================================================
+
+export THEIR_LIBS := -lpthread -lm -lrt
+
+#===============================================================================
+
+# Builds everything.
+all-target: make-dirs
+	@$(MAKE) -C $(SRCDIR) all
+
+# Cleans object files.
+clean-target:
+	@$(MAKE) -C $(SRCDIR) clean
+
+# Cleans everything.
+distclean-target:
+	@$(MAKE) -C $(SRCDIR) distclean

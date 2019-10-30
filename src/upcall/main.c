@@ -22,14 +22,26 @@
  * SOFTWARE.
  */
 
-#include <ulibc/stdio.h>
-#include <nanvix.h>
-#include <stdint.h>
+#include <nanvix/sys/thread.h>
+#include <nanvix/sys/signal.h>
+#include <nanvix/ulib.h>
+#include <posix/stdint.h>
 #include <kbench.h>
 
+/**
+ * @brief Horizontal line.
+ */
+static const char *HLINE =
+	"------------------------------------------------------------------------";
+
 /*============================================================================*
- * Profilling                                                                 *
+ * Profiling                                                                  *
  *============================================================================*/
+
+/**
+ * @brief Name of the benchmark.
+ */
+#define BENCHMARK_NAME "upcall"
 
 /**
  * @brief Number of events to profile.
@@ -38,6 +50,8 @@
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
 	#define BENCHMARK_PERF_EVENTS 5
+#else
+	#define BENCHMARK_PERF_EVENTS 1
 #endif
 
 /**
@@ -50,19 +64,21 @@ static uint64_t perf_value;
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
 #if defined(__mppa256__)
-	PERF_CYCLES,
-	PERF_ICACHE_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_REG_STALLS,
+	PERF_DTLB_STALLS,
 	PERF_ITLB_STALLS,
-	PERF_DTLB_STALLS
-#elif defined(__optimsoc__)
-	PERF_CYCLES,
+	PERF_REG_STALLS,
 	PERF_BRANCH_STALLS,
-	PERF_ICACHE_STALLS,
 	PERF_DCACHE_STALLS,
-	PERF_REG_STALLS
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#elif defined(__optimsoc__)
+	PERF_REG_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_ICACHE_STALLS,
+	PERF_CYCLES
+#else
+	0
 #endif
 };
 
@@ -70,27 +86,33 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
  * @brief Dump execution statistics.
  *
  * @param it    Benchmark iteration.
+ * @oaram name  Benchmark name.
  * @param stats Execution statistics.
  */
-static inline void benchmark_dump_stats(int it, uint64_t *stats)
+static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 {
-	static spinlock_t lock = SPINLOCK_UNLOCKED;
-
-	spinlock_lock(&lock);
-
-		printf("%s %d %d %d %d %d %d %d %d\n",
-			"[benchmarks][upcall]",
-			it,
-			UINT32(stats[0]),
-			UINT32(stats[1]),
-			UINT32(stats[2]),
-			UINT32(stats[3]),
-			UINT32(stats[4]),
-			UINT32(stats[5]),
-			UINT32(stats[6])
-		);
-
-	spinlock_unlock(&lock);
+	uprintf(
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
+#elif (BENCHMARK_PERF_EVENTS >= 5)
+		"[benchmarks][%s] %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s] %d %d",
+#endif
+		name,
+		it,
+#if (BENCHMARK_PERF_EVENTS >= 7)
+		UINT32(stats[6]),
+		UINT32(stats[5]),
+#endif
+#if (BENCHMARK_PERF_EVENTS >= 5)
+		UINT32(stats[4]),
+		UINT32(stats[3]),
+		UINT32(stats[2]),
+		UINT32(stats[1]),
+#endif
+		UINT32(stats[0])
+	);
 }
 
 /*============================================================================*
@@ -104,14 +126,13 @@ static inline void benchmark_dump_stats(int it, uint64_t *stats)
  */
 static void handler(void *arg)
 {
+	((void) arg);
+
 	/* Stops measurements. */
 	perf_stop(0);
 
 	/* Read measurements. */
 	perf_value = perf_read(0);
-
-	/* Exit. */
-	kthread_exit(arg);
 }
 
 /**
@@ -125,13 +146,13 @@ static void *task(void *arg)
 	int perfid;
 
 	/* Gets perf ID. */
-	perfid = ((int) arg);
+	perfid = ((int *) arg)[0];
 
 	/* Starts measurements. */
 	perf_start(0, perfid);
 
 	/* Triggers a page fault. */
-	tmp = *((int *) 0xdeadbeef);
+	tmp = *((int *) NULL);
 
 	/* Unreacheable. */
 	UNUSED(tmp);
@@ -145,12 +166,12 @@ static void *task(void *arg)
 void benchmark_upcall(void)
 {
 	kthread_t tid;
-	struct sigaction sigact;
+	struct ksigaction sigact;
 	uint64_t upcall_stats[BENCHMARK_PERF_EVENTS];
 
 	/* Sets the page fault handler. */
 	sigact.handler = handler;
-	KASSERT(ksigclt(SIGPGFAULT, &sigact) == 0);
+	ksigctl(SIGPGFAULT, &sigact);
 
 	/* Executes benchmarks. */
 	for (int i = 0; i < (NITERATIONS + SKIP); i++)
@@ -158,7 +179,7 @@ void benchmark_upcall(void)
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
 			/* Spawn a thread. */
-			kthread_create(&tid, task, ((void *) perf_events[j]));
+			kthread_create(&tid, task, ((void *) &perf_events[j]));
 
 			/* Wait for the thread. */
 			kthread_join(tid, NULL);
@@ -168,12 +189,12 @@ void benchmark_upcall(void)
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, upcall_stats);
+			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, upcall_stats);
 	}
 
 	/* Unsets the page fault handler. */
 	sigact.handler = NULL;
-	KASSERT(ksigclt(SIGPGFAULT, &sigact) == 0);
+	ksigctl(SIGPGFAULT, &sigact);
 }
 
 /*============================================================================*
@@ -186,16 +207,16 @@ void benchmark_upcall(void)
  * @param argc Argument counter.
  * @param argv Argument variables.
  */
-int main(int argc, const char *argv[])
+int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	benchmark_upcall();
 
-	printf(HLINE);
+	uprintf(HLINE);
 
 	return (0);
 }

@@ -25,47 +25,66 @@
 OUTPUT_FORMAT("elf32-i386")
 ENTRY(start)
 
+/*
+ * Page Size (4 KB)
+ */
+PAGE_SIZE = 0x1000;
+
 SECTIONS
 {
 	. = 0x100000;
 
-	KSTART = .;
+	KSTART_CODE_START = .;
 
 	/* Bootstrap section. */
 	.bootstrap :
 	{
+		__BOOTSTRAP_START = .;
 		*boot*.o *(.bootstrap)
+		__BOOTSTRAP_END = .;
 	}
 
-	. += 0xc0000000;
+	. =ALIGN(PAGE_SIZE);
 
 	/* Kernel code section. */
-	.text ALIGN(4096) : AT(ADDR(.text) - 0xc0000000)
-   {
-       *(.text)
-       *(.rodata)
-   }
+	.text ALIGN(PAGE_SIZE) : AT(ADDR(.text))
+	{
+		__TEXT_START = .;
+		*(.text)
+		*(.rodata)
+		__TEXT_END = .;
+	}
 
-   /* Initialized kernel data section. */
-   .data ALIGN(4096) : AT(ADDR(.data) - 0xc0000000)
-   {
-       *(.data)
-   }
+	KERNEL_CODE_END = .;
 
-   /* Uninitialized kernel data section. */
-   .bss : AT(ADDR(.bss) - 0xc0000000)
-   {
-       *(.bss)
-   }
+	. = ALIGN(PAGE_SIZE);
 
-   . =ALIGN(4096);
+	KERNEL_DATA_START = .;
 
-   KDATA_END = .;
+	/* Initialized kernel data section. */
+	.data ALIGN(PAGE_SIZE) : AT(ADDR(.data))
+	{
+		__DATA_START = .;
+		*(.data)
+		__DATA_END = .;
+	}
 
-   /* Discarded. */
-   /DISCARD/ :
-   {
-        *(.comment)
-        *(.note)
-   }
+	/* Uninitialized kernel data section. */
+	.bss : AT(ADDR(.bss))
+	{
+		__BSS_START = .;
+		*(.bss)
+		__BSS_END = .;
+	}
+
+	KERNEL_DATA_END = .;
+
+	. =ALIGN(PAGE_SIZE);
+
+	/* Discarded. */
+	/DISCARD/ :
+	{
+		*(.comment)
+		*(.note)
+	}
 }
