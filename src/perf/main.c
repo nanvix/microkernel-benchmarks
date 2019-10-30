@@ -136,12 +136,9 @@ int __main2(int argc, const char *argv[])
 	{
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
-			perf_start(0, perf_events[j]);
+			kstats(NULL, perf_events[j]);
 
-				/* noop. */
-
-			perf_stop(0);
-			stats[j] = perf_read(0);
+			kstats(&stats[j], 0);
 		}
 
 		if (i >= SKIP)
