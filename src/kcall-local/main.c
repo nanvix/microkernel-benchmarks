@@ -22,33 +22,16 @@
  * SOFTWARE.
  */
 
-#include <nanvix/sys/thread.h>
 #include <nanvix/sys/perf.h>
 #include <nanvix/ulib.h>
 #include <posix/stdint.h>
 #include <kbench.h>
 
 /**
- * @name Benchmark Parameters
- */
-/**@{*/
-#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
-#define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
-/**@}*/
-
-/**
  * @brief Horizontal line.
  */
 static const char *HLINE =
 	"------------------------------------------------------------------------";
-
-/**
- * @name Benchmark Kernel Parameters
- */
-/**@{*/
-static int NTHREADS; /**< Number of Working Threads */
-/**@}*/
 
 /*============================================================================*
  * Profiling                                                                  *
@@ -149,22 +132,23 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
  *============================================================================*/
 
 /**
- * @brief Thread info.
+ * @brief Local Kernel Call Benchmark
+ *
+ * @param argc Argument counter.
+ * @param argv Argument variables.
  */
-struct tdata
+int __main2(int argc, const char *argv[])
 {
-	int tnum;  /**< Thread Number */
-} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
-
-/**
- * @brief Issues a local kernel call.
- */
-static void *task(void *arg)
-{
-	struct tdata *t = arg;
 	uint64_t stats[BENCHMARK_PERF_EVENTS];
 
-	UNUSED(t);
+	((void) argc);
+	((void) argv);
+
+	/* Skip benchmark. */
+	if (cluster_get_num() != PROCESSOR_CLUSTERNUM_MASTER)
+		return (0);
+
+	uprintf(HLINE);
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
@@ -181,67 +165,6 @@ static void *task(void *arg)
 		if (i >= SKIP)
 			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, stats);
 	}
-
-	return (NULL);
-}
-
-/**
- * @brief Local Kernel Call Benchmark Kernel
- *
- * @param nthreads Number of working threads.
- */
-static void kernel_kcall_local(int nthreads)
-{
-	kthread_t tid[NTHREADS_MAX];
-
-	/* Save kernel parameters. */
-	NTHREADS = nthreads;
-
-	/* Spawn threads. */
-	for (int i = 0; i < nthreads; i++)
-	{
-		/* Initialize thread data structure. */
-		tdata[i].tnum = i;
-
-		kthread_create(&tid[i], task, &tdata[i]);
-	}
-
-	/* Wait for threads. */
-	for (int i = 0; i < nthreads; i++)
-		kthread_join(tid[i], NULL);
-}
-
-/*============================================================================*
- * Benchmark Driver                                                           *
- *============================================================================*/
-
-/**
- * @brief Local Kernel Call Benchmark
- *
- * @param argc Argument counter.
- * @param argv Argument variables.
- */
-int __main2(int argc, const char *argv[])
-{
-	((void) argc);
-	((void) argv);
-
-	/* Skip benchmark. */
-	if (cluster_get_num() != PROCESSOR_CLUSTERNUM_MASTER)
-		return (0);
-
-	uprintf(HLINE);
-
-#ifndef NDEBUG
-
-	kernel_kcall_local(NTHREADS_MAX);
-
-#else
-
-	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_kcall_local(nthreads);
-
-#endif
 
 	uprintf(HLINE);
 
