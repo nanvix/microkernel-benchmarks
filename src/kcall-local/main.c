@@ -22,32 +22,16 @@
  * SOFTWARE.
  */
 
-#include <nanvix/sys/thread.h>
+#include <nanvix/sys/perf.h>
 #include <nanvix/ulib.h>
 #include <posix/stdint.h>
 #include <kbench.h>
-
-/**
- * @name Benchmark Parameters
- */
-/**@{*/
-#define NTHREADS_MIN                1  /**< Minimum Number of Working Threads      */
-#define NTHREADS_MAX  (THREAD_MAX - 1) /**< Maximum Number of Working Threads      */
-#define NTHREADS_STEP               1  /**< Increment on Number of Working Threads */
-/**@}*/
 
 /**
  * @brief Horizontal line.
  */
 static const char *HLINE =
 	"------------------------------------------------------------------------";
-
-/**
- * @name Benchmark Kernel Parameters
- */
-/**@{*/
-static int NTHREADS; /**< Number of Working Threads */
-/**@}*/
 
 /*============================================================================*
  * Profiling                                                                  *
@@ -64,7 +48,7 @@ static int NTHREADS; /**< Number of Working Threads */
 #if defined(__mppa256__)
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
-	#define BENCHMARK_PERF_EVENTS 5
+	#define BENCHMARK_PERF_EVENTS 11
 #else
 	#define BENCHMARK_PERF_EVENTS 1
 #endif
@@ -82,11 +66,17 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_ICACHE_STALLS,
 	PERF_CYCLES
 #elif defined(__optimsoc__)
-	PERF_REG_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_ICACHE_STALLS,
-	PERF_CYCLES
+	MOR1KX_PERF_LOAD_ACCESS,
+	MOR1KX_PERF_STORE_ACCESS,
+	MOR1KX_PERF_INSTRUCTION_FETCH,
+	MOR1KX_PERF_DCACHE_MISSES,
+	MOR1KX_PERF_ICACHE_MISSES,
+	MOR1KX_PERF_IFETCH_STALLS,
+	MOR1KX_PERF_LSU_STALLS,
+	MOR1KX_PERF_BRANCH_STALLS,
+	MOR1KX_PERF_DTLB_MISSES,
+	MOR1KX_PERF_ITLB_MISSES,
+	MOR1KX_PERF_DATA_DEP_STALLS
 #else
 	0
 #endif
@@ -102,27 +92,38 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 {
 	uprintf(
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		"[benchmarks][%s] %d %d %d %d %d %d %d %d %d",
-#elif (BENCHMARK_PERF_EVENTS >= 5)
-		"[benchmarks][%s] %d %d %d %d %d %d %d",
+#if defined(__mppa256__)
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d %d %d %d %d",
 #else
-		"[benchmarks][%s] %d %d %d",
+		"[benchmarks][%s] %d %d",
 #endif
 		name,
 		it,
-		NTHREADS,
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		UINT32(stats[6]),
-		UINT32(stats[5]),
-#endif
-#if (BENCHMARK_PERF_EVENTS >= 5)
-		UINT32(stats[4]),
-		UINT32(stats[3]),
-		UINT32(stats[2]),
+#if defined(__mppa256__)
+		UINT32(stats[0]),
 		UINT32(stats[1]),
-#endif
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6])
+#elif defined(__optimsoc__)
+		UINT32(stats[0]), /* instruction fetch        */
+		UINT32(stats[1]), /* load access              */
+		UINT32(stats[2]), /* store access             */
+		UINT32(stats[3]), /* instruction fetch stalls */
+		UINT32(stats[4]), /* dcache misses            */
+		UINT32(stats[5]), /* icache misses            */
+		UINT32(stats[6]), /* lsu stalls               */
+		UINT32(stats[7]), /* branch stalls            */
+		UINT32(stats[8]), /* dtlb stalls              */
+		UINT32(stats[9]), /* itlb stalls              */
+		UINT32(stats[10]) /* register stalls          */
+#else
 		UINT32(stats[0])
+#endif
 	);
 }
 
@@ -131,22 +132,23 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
  *============================================================================*/
 
 /**
- * @brief Thread info.
+ * @brief Local Kernel Call Benchmark
+ *
+ * @param argc Argument counter.
+ * @param argv Argument variables.
  */
-struct tdata
+int __main2(int argc, const char *argv[])
 {
-	int tnum;  /**< Thread Number */
-} tdata[NTHREADS_MAX] ALIGN(CACHE_LINE_SIZE);
-
-/**
- * @brief Issues a local kernel call.
- */
-static void *task(void *arg)
-{
-	struct tdata *t = arg;
 	uint64_t stats[BENCHMARK_PERF_EVENTS];
 
-	UNUSED(t);
+	((void) argc);
+	((void) argv);
+
+	/* Skip benchmark. */
+	if (cluster_get_num() != PROCESSOR_CLUSTERNUM_MASTER)
+		return (0);
+
+	uprintf(HLINE);
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
 	{
@@ -163,67 +165,6 @@ static void *task(void *arg)
 		if (i >= SKIP)
 			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, stats);
 	}
-
-	return (NULL);
-}
-
-/**
- * @brief Local Kernel Call Benchmark Kernel
- *
- * @param nthreads Number of working threads.
- */
-static void kernel_kcall_local(int nthreads)
-{
-	kthread_t tid[NTHREADS_MAX];
-
-	/* Save kernel parameters. */
-	NTHREADS = nthreads;
-
-	/* Spawn threads. */
-	for (int i = 0; i < nthreads; i++)
-	{
-		/* Initialize thread data structure. */
-		tdata[i].tnum = i;
-
-		kthread_create(&tid[i], task, &tdata[i]);
-	}
-
-	/* Wait for threads. */
-	for (int i = 0; i < nthreads; i++)
-		kthread_join(tid[i], NULL);
-}
-
-/*============================================================================*
- * Benchmark Driver                                                           *
- *============================================================================*/
-
-/**
- * @brief Local Kernel Call Benchmark
- *
- * @param argc Argument counter.
- * @param argv Argument variables.
- */
-int __main2(int argc, const char *argv[])
-{
-	((void) argc);
-	((void) argv);
-
-	/* Skip benchmark. */
-	if (cluster_get_num() != PROCESSOR_CLUSTERNUM_MASTER)
-		return (0);
-
-	uprintf(HLINE);
-
-#ifndef NDEBUG
-
-	kernel_kcall_local(NTHREADS_MAX);
-
-#else
-
-	for (int nthreads = NTHREADS_MIN; nthreads <= NTHREADS_MAX; nthreads += NTHREADS_STEP)
-		kernel_kcall_local(nthreads);
-
-#endif
 
 	uprintf(HLINE);
 

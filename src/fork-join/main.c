@@ -64,7 +64,7 @@ static int NTHREADS; /**< Number of Working Threads */
 #if defined(__mppa256__)
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
-	#define BENCHMARK_PERF_EVENTS 5
+	#define BENCHMARK_PERF_EVENTS 11
 #else
 	#define BENCHMARK_PERF_EVENTS 1
 #endif
@@ -103,53 +103,77 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats, uint64_t *join_stats)
 {
 	uprintf(
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d %d",
-#elif (BENCHMARK_PERF_EVENTS >= 5)
-		"[benchmarks][%s] %d %s %d %d %d %d %d %d",
+#if defined(__mppa256__)
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d %d %d %d %d %d",
 #else
-		"[benchmarks][%s] %d %s %d %d",
+		"[benchmarks][%s] %d %d %s %d %d",
 #endif
 		name,
 		it,
 		"f",
 		NTHREADS,
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		UINT32(fork_stats[6]),
-		UINT32(fork_stats[5]),
-#endif
-#if (BENCHMARK_PERF_EVENTS >= 5)
-		UINT32(fork_stats[4]),
-		UINT32(fork_stats[3]),
-		UINT32(fork_stats[2]),
+#if defined(__mppa256__)
+		UINT32(fork_stats[0]),
 		UINT32(fork_stats[1]),
-#endif
+		UINT32(fork_stats[2]),
+		UINT32(fork_stats[3]),
+		UINT32(fork_stats[4]),
+		UINT32(fork_stats[5]),
+		UINT32(fork_stats[6])
+#elif defined(__optimsoc__)
+		UINT32(fork_stats[0]), /* instruction fetch        */
+		UINT32(fork_stats[1]), /* load access              */
+		UINT32(fork_stats[2]), /* store access             */
+		UINT32(fork_stats[3]), /* instruction fetch stalls */
+		UINT32(fork_stats[4]), /* dcache misses            */
+		UINT32(fork_stats[5]), /* icache misses            */
+		UINT32(fork_stats[6]), /* lsu stalls               */
+		UINT32(fork_stats[7]), /* branch stalls            */
+		UINT32(fork_stats[8]), /* dtlb stalls              */
+		UINT32(fork_stats[9]), /* itlb stalls              */
+		UINT32(fork_stats[10]) /* register stalls          */
+#else
 		UINT32(fork_stats[0])
+#endif
 	);
 
 	uprintf(
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		"[benchmarks][%s] %d %s %d %d %d %d %d %d %d %d",
-#elif (BENCHMARK_PERF_EVENTS >= 5)
-		"[benchmarks][%s] %d %s %d %d %d %d %d %d",
+#if defined(__mppa256__)
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d %d %d %d %d %d",
 #else
-		"[benchmarks][%s] %d %s %d %d",
+		"[benchmarks][%s] %d %d %s %d %d",
 #endif
 		name,
 		it,
 		"j",
 		NTHREADS,
-#if (BENCHMARK_PERF_EVENTS >= 7)
-		UINT32(join_stats[6]),
-		UINT32(join_stats[5]),
-#endif
-#if (BENCHMARK_PERF_EVENTS >= 5)
-		UINT32(join_stats[4]),
-		UINT32(join_stats[3]),
-		UINT32(join_stats[2]),
+#if defined(__mppa256__)
+		UINT32(join_stats[0]),
 		UINT32(join_stats[1]),
-#endif
+		UINT32(join_stats[2]),
+		UINT32(join_stats[3]),
+		UINT32(join_stats[4]),
+		UINT32(join_stats[5]),
+		UINT32(join_stats[6])
+#elif defined(__optimsoc__)
+		UINT32(join_stats[0]), /* instruction fetch        */
+		UINT32(join_stats[1]), /* load access              */
+		UINT32(join_stats[2]), /* store access             */
+		UINT32(join_stats[3]), /* instruction fetch stalls */
+		UINT32(join_stats[4]), /* dcache misses            */
+		UINT32(join_stats[5]), /* icache misses            */
+		UINT32(join_stats[6]), /* lsu stalls               */
+		UINT32(join_stats[7]), /* branch stalls            */
+		UINT32(join_stats[8]), /* dtlb stalls              */
+		UINT32(join_stats[9]), /* itlb stalls              */
+		UINT32(join_stats[10]) /* register stalls          */
+#else
 		UINT32(join_stats[0])
+#endif
 	);
 }
 
