@@ -73,15 +73,14 @@ static size_t OBJSIZE; /**< Object Size               */
  */
 static inline void benchmark_dump_stats(int it, const char *type, int nobjs, size_t objsize, uint64_t *stats)
 {
-	uprintf("%s %d %s %d %d %d %d %d",
+	uprintf("%s %d %s %d %d %d %d",
 		"[benchmarks][buffer]",
 		it,
 		type,
 		NTHREADS,
 		nobjs,
 		objsize,
-		UINT32(stats[0]),
-		UINT32(stats[1])
+		UINT32(stats[0])
 	);
 }
 
