@@ -48,7 +48,7 @@ static const char *HLINE =
 #if defined(__mppa256__)
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
-	#define BENCHMARK_PERF_EVENTS 11
+	#define BENCHMARK_PERF_EVENTS 7
 #else
 	#define BENCHMARK_PERF_EVENTS 1
 #endif
@@ -66,17 +66,13 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_ICACHE_STALLS,
 	PERF_CYCLES
 #elif defined(__optimsoc__)
-	MOR1KX_PERF_LOAD_ACCESS,
-	MOR1KX_PERF_STORE_ACCESS,
-	MOR1KX_PERF_INSTRUCTION_FETCH,
-	MOR1KX_PERF_DCACHE_MISSES,
+	MOR1KX_PERF_LSU_HITS,
+	MOR1KX_PERF_BRANCH_STALLS,
+	MOR1KX_PERF_ICACHE_HITS,
+	MOR1KX_PERF_REG_STALLS,
 	MOR1KX_PERF_ICACHE_MISSES,
 	MOR1KX_PERF_IFETCH_STALLS,
 	MOR1KX_PERF_LSU_STALLS,
-	MOR1KX_PERF_BRANCH_STALLS,
-	MOR1KX_PERF_DTLB_MISSES,
-	MOR1KX_PERF_ITLB_MISSES,
-	MOR1KX_PERF_DATA_DEP_STALLS
 #else
 	0
 #endif
@@ -95,7 +91,7 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 #if defined(__mppa256__)
 		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
 #elif defined(__optimsoc__)
-		"[benchmarks][%s] %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
 #else
 		"[benchmarks][%s] %d %d",
 #endif
@@ -110,17 +106,13 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
 		UINT32(stats[5]),
 		UINT32(stats[6])
 #elif defined(__optimsoc__)
-		UINT32(stats[0]), /* instruction fetch        */
-		UINT32(stats[1]), /* load access              */
-		UINT32(stats[2]), /* store access             */
-		UINT32(stats[3]), /* instruction fetch stalls */
-		UINT32(stats[4]), /* dcache misses            */
-		UINT32(stats[5]), /* icache misses            */
-		UINT32(stats[6]), /* lsu stalls               */
-		UINT32(stats[7]), /* branch stalls            */
-		UINT32(stats[8]), /* dtlb stalls              */
-		UINT32(stats[9]), /* itlb stalls              */
-		UINT32(stats[10]) /* register stalls          */
+		UINT32(stats[0]),
+		UINT32(stats[1]),
+		UINT32(stats[2]),
+		UINT32(stats[3]),
+		UINT32(stats[4]),
+		UINT32(stats[5]),
+		UINT32(stats[6])
 #else
 		UINT32(stats[0])
 #endif

@@ -64,7 +64,7 @@ static int NTHREADS; /**< Number of Working Threads */
 #if defined(__mppa256__)
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
-	#define BENCHMARK_PERF_EVENTS 11
+	#define BENCHMARK_PERF_EVENTS 7
 #else
 	#define BENCHMARK_PERF_EVENTS 1
 #endif
@@ -82,11 +82,13 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_ICACHE_STALLS,
 	PERF_CYCLES
 #elif defined(__optimsoc__)
-	PERF_REG_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_ICACHE_STALLS,
-	PERF_CYCLES
+	MOR1KX_PERF_LSU_HITS,
+	MOR1KX_PERF_BRANCH_STALLS,
+	MOR1KX_PERF_ICACHE_HITS,
+	MOR1KX_PERF_REG_STALLS,
+	MOR1KX_PERF_ICACHE_MISSES,
+	MOR1KX_PERF_IFETCH_STALLS,
+	MOR1KX_PERF_LSU_STALLS,
 #else
 	0
 #endif
@@ -106,7 +108,7 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats,
 #if defined(__mppa256__)
 		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
 #elif defined(__optimsoc__)
-		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
 #else
 		"[benchmarks][%s] %d %d %s %d %d",
 #endif
@@ -129,11 +131,7 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats,
 		UINT32(fork_stats[3]), /* instruction fetch stalls */
 		UINT32(fork_stats[4]), /* dcache misses            */
 		UINT32(fork_stats[5]), /* icache misses            */
-		UINT32(fork_stats[6]), /* lsu stalls               */
-		UINT32(fork_stats[7]), /* branch stalls            */
-		UINT32(fork_stats[8]), /* dtlb stalls              */
-		UINT32(fork_stats[9]), /* itlb stalls              */
-		UINT32(fork_stats[10]) /* register stalls          */
+		UINT32(fork_stats[6])  /* lsu stalls               */
 #else
 		UINT32(fork_stats[0])
 #endif
@@ -143,7 +141,7 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats,
 #if defined(__mppa256__)
 		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
 #elif defined(__optimsoc__)
-		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d %d %d %d %d %d",
+		"[benchmarks][%s] %d %d %s %d %d %d %d %d %d %d",
 #else
 		"[benchmarks][%s] %d %d %s %d %d",
 #endif
@@ -166,11 +164,7 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *fork_stats,
 		UINT32(join_stats[3]), /* instruction fetch stalls */
 		UINT32(join_stats[4]), /* dcache misses            */
 		UINT32(join_stats[5]), /* icache misses            */
-		UINT32(join_stats[6]), /* lsu stalls               */
-		UINT32(join_stats[7]), /* branch stalls            */
-		UINT32(join_stats[8]), /* dtlb stalls              */
-		UINT32(join_stats[9]), /* itlb stalls              */
-		UINT32(join_stats[10]) /* register stalls          */
+		UINT32(join_stats[6])  /* lsu stalls               */
 #else
 		UINT32(join_stats[0])
 #endif
