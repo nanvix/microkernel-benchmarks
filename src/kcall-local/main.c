@@ -136,10 +136,6 @@ int __main2(int argc, const char *argv[])
 	((void) argc);
 	((void) argv);
 
-	/* Skip benchmark. */
-	if (cluster_get_num() != PROCESSOR_CLUSTERNUM_MASTER)
-		return (0);
-
 	uprintf(HLINE);
 
 	for (int i = 0; i < NITERATIONS + SKIP; i++)
