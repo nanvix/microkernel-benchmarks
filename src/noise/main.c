@@ -68,7 +68,7 @@ static char *NOISE = "y"; /**< Noise On?                */
 #if defined(__mppa256__)
 	#define BENCHMARK_PERF_EVENTS 7
 #elif defined(__optimsoc__)
-	#define BENCHMARK_PERF_EVENTS 5
+	#define BENCHMARK_PERF_EVENTS 7
 #else
 	#define BENCHMARK_PERF_EVENTS 1
 #endif
@@ -86,11 +86,13 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 	PERF_ICACHE_STALLS,
 	PERF_CYCLES
 #elif defined(__optimsoc__)
-	PERF_REG_STALLS,
-	PERF_BRANCH_STALLS,
-	PERF_DCACHE_STALLS,
-	PERF_ICACHE_STALLS,
-	PERF_CYCLES
+	MOR1KX_PERF_LSU_HITS,
+	MOR1KX_PERF_BRANCH_STALLS,
+	MOR1KX_PERF_ICACHE_HITS,
+	MOR1KX_PERF_REG_STALLS,
+	MOR1KX_PERF_ICACHE_MISSES,
+	MOR1KX_PERF_IFETCH_STALLS,
+	MOR1KX_PERF_LSU_STALLS,
 #else
 	0
 #endif
