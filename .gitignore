@@ -25,6 +25,7 @@ tags
 *.swo
 *.clangd/
 *.vscode/
+*.DS_Store
 
 # Barelib Headers
 include/nanvix/barelib.h
