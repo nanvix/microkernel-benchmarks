@@ -40,7 +40,11 @@
 	/**
 	 * @brief Iterations to skip on warmup.
 	 */
-	#define SKIP 10
+	#ifdef NDEBUG
+		#define SKIP 10
+	#else
+		#define SKIP 0
+	#endif
 
 	/**
 	 * @brief Casts something to a uint32_t.
