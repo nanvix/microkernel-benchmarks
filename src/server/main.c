@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+#include <nanvix/sys/perf.h>
 #include <nanvix/sys/thread.h>
 #include <nanvix/sys/mutex.h>
 #include <nanvix/sys/semaphore.h>
@@ -65,30 +66,118 @@ static int NWORKERS; /**< Number of Worker Threads */
 /**
  * @brief Number of events to profile.
  */
-#define BENCHMARK_PERF_EVENTS 1
+#if defined(__mppa256__)
+	#define BENCHMARK_PERF_EVENTS 7
+#elif defined(__optimsoc__)
+	#define BENCHMARK_PERF_EVENTS 7
+#else
+	#define BENCHMARK_PERF_EVENTS 1
+#endif
 
 /**
  * Performance events.
  */
 static int perf_events[BENCHMARK_PERF_EVENTS] = {
+#if defined(__mppa256__)
+	PERF_DTLB_STALLS,
+	PERF_ITLB_STALLS,
+	PERF_REG_STALLS,
+	PERF_BRANCH_STALLS,
+	PERF_DCACHE_STALLS,
+	PERF_ICACHE_STALLS,
 	PERF_CYCLES
+#elif defined(__optimsoc__)
+	MOR1KX_PERF_LSU_HITS,
+	MOR1KX_PERF_BRANCH_STALLS,
+	MOR1KX_PERF_ICACHE_HITS,
+	MOR1KX_PERF_REG_STALLS,
+	MOR1KX_PERF_ICACHE_MISSES,
+	MOR1KX_PERF_IFETCH_STALLS,
+	MOR1KX_PERF_LSU_STALLS,
+#else
+	0
+#endif
 };
 
 /**
  * @brief Dump execution statistics.
  *
- * @param it    Benchmark iteration.
- * @oaram name  Benchmark name.
- * @param stats Execution statistics.
+ * @param it          Benchmark iteration.
+ * @oaram name        Benchmark name.
+ * @param uland_stats User land execution statistics.
+ * @param kland_stats Kernel execution statistics.
  */
-static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
+static void benchmark_dump_stats(
+	int it,
+	const char *name,
+	uint64_t *uland_stats,
+	uint64_t *kland_stats
+)
 {
-	uprintf("[benchmarks][%s] %d %d %d %d",
+	uprintf(
+#if defined(__mppa256__)
+		"[benchmarks][%s][u] %d %d %d %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s][u] %d %d %d %d %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s][u] %d %d %d %d",
+#endif
 		name,
 		it,
 		NWORKERS,
 		NREQUESTS,
-		UINT32(stats[0])
+#if defined(__mppa256__)
+		UINT32(uland_stats[0]),
+		UINT32(uland_stats[1]),
+		UINT32(uland_stats[2]),
+		UINT32(uland_stats[3]),
+		UINT32(uland_stats[4]),
+		UINT32(uland_stats[5]),
+		UINT32(uland_stats[6])
+#elif defined(__optimsoc__)
+		UINT32(uland_stats[0]),
+		UINT32(uland_stats[1]),
+		UINT32(uland_stats[2]),
+		UINT32(uland_stats[3]),
+		UINT32(uland_stats[4]),
+		UINT32(uland_stats[5]),
+		UINT32(uland_stats[6])
+#else
+		UINT32(uland_stats[0])
+#endif
+	);
+
+	uprintf(
+#if defined(__mppa256__)
+		"[benchmarks][%s][k] %d %d %d %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s][k] %d %d %d %d %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s][k] %d %d %d %d",
+#endif
+		name,
+		it,
+		NWORKERS,
+		NREQUESTS,
+#if defined(__mppa256__)
+		UINT32(kland_stats[0]),
+		UINT32(kland_stats[1]),
+		UINT32(kland_stats[2]),
+		UINT32(kland_stats[3]),
+		UINT32(kland_stats[4]),
+		UINT32(kland_stats[5]),
+		UINT32(kland_stats[6])
+#elif defined(__optimsoc__)
+		UINT32(kland_stats[0]),
+		UINT32(kland_stats[1]),
+		UINT32(kland_stats[2]),
+		UINT32(kland_stats[3]),
+		UINT32(kland_stats[4]),
+		UINT32(kland_stats[5]),
+		UINT32(kland_stats[6])
+#else
+		UINT32(kland_stats[0])
+#endif
 	);
 }
 
@@ -224,41 +313,54 @@ again:
  */
 static void server(int nworkers, int nrequests)
 {
-	uint64_t stats;
+	uint64_t uland_stats[BENCHMARK_PERF_EVENTS];
+	uint64_t kland_stats[BENCHMARK_PERF_EVENTS];
 
 	server_startup(nworkers);
 
 		for (int k = 0; k < NITERATIONS + SKIP; k++)
 		{
-			int n = 0;
-
-			perf_start(0, perf_events[0]);
-
-			do
+			for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 			{
-				nanvix_semaphore_down(&sinfo.workers);
-				nanvix_mutex_lock(&sinfo.lock);
+				int n = 0;
 
-				/* Dispatch request to an idle worker thread. */
-				for (int i = 0; i < nworkers; i++)
+				perf_start(0, perf_events[j]);
+				kstats(NULL, perf_events[j]);
+
+				do
 				{
-					if (workers[i].idle)
+					nanvix_semaphore_down(&sinfo.workers);
+					nanvix_mutex_lock(&sinfo.lock);
+
+					/* Dispatch request to an idle worker thread. */
+					for (int i = 0; i < nworkers; i++)
 					{
-						workers[i].request = n++;
-						workers[i].idle = 0;
-						nanvix_semaphore_up(&workers[i].wakeup);
-						break;
+						if (workers[i].idle)
+						{
+							workers[i].request = n++;
+							workers[i].idle = 0;
+							nanvix_semaphore_up(&workers[i].wakeup);
+							break;
+						}
 					}
-				}
 
-				nanvix_mutex_unlock(&sinfo.lock);
-			} while (n < nrequests);
+					nanvix_mutex_unlock(&sinfo.lock);
+				} while (n < nrequests);
 
-			perf_stop(0);
-			stats = perf_read(0);
+				kstats(&kland_stats[j], 0);
+				perf_stop(0);
+				uland_stats[j] = perf_read(0);
+			}
 
 			if (k >= SKIP)
-				benchmark_dump_stats(k - SKIP, BENCHMARK_NAME, &stats);
+			{
+				benchmark_dump_stats(
+					k - SKIP,
+					BENCHMARK_NAME,
+					uland_stats,
+					kland_stats
+				);
+			}
 		}
 
 	server_shutdown();

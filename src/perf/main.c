@@ -81,40 +81,77 @@ static int perf_events[BENCHMARK_PERF_EVENTS] = {
 /**
  * @brief Dump execution statistics.
  *
- * @param it    Benchmark iteration.
- * @oaram name  Benchmark name.
- * @param stats Execution statistics.
+ * @param it          Benchmark iteration.
+ * @oaram name        Benchmark name.
+ * @param uland_stats User land execution statistics.
+ * @param kland_stats Kernel execution statistics.
  */
-static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
+static void benchmark_dump_stats(
+	int it,
+	const char *name,
+	uint64_t *uland_stats,
+	uint64_t *kland_stats
+)
 {
 	uprintf(
 #if defined(__mppa256__)
-		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
+		"[benchmarks][%s][u] %d %d %d %d %d %d %d %d",
 #elif defined(__optimsoc__)
-		"[benchmarks][%s] %d %d %d %d %d %d %d %d",
+		"[benchmarks][%s][u] %d %d %d %d %d %d %d %d",
 #else
-		"[benchmarks][%s] %d %d",
+		"[benchmarks][%s][u] %d %d",
 #endif
 		name,
 		it,
 #if defined(__mppa256__)
-		UINT32(stats[0]),
-		UINT32(stats[1]),
-		UINT32(stats[2]),
-		UINT32(stats[3]),
-		UINT32(stats[4]),
-		UINT32(stats[5]),
-		UINT32(stats[6])
+		UINT32(uland_stats[0]),
+		UINT32(uland_stats[1]),
+		UINT32(uland_stats[2]),
+		UINT32(uland_stats[3]),
+		UINT32(uland_stats[4]),
+		UINT32(uland_stats[5]),
+		UINT32(uland_stats[6])
 #elif defined(__optimsoc__)
-		UINT32(stats[0]),
-		UINT32(stats[1]),
-		UINT32(stats[2]),
-		UINT32(stats[3]),
-		UINT32(stats[4]),
-		UINT32(stats[5]),
-		UINT32(stats[6])
+		UINT32(uland_stats[0]),
+		UINT32(uland_stats[1]),
+		UINT32(uland_stats[2]),
+		UINT32(uland_stats[3]),
+		UINT32(uland_stats[4]),
+		UINT32(uland_stats[5]),
+		UINT32(uland_stats[6])
 #else
-		UINT32(stats[0])
+		UINT32(uland_stats[0])
+#endif
+	);
+
+	uprintf(
+#if defined(__mppa256__)
+		"[benchmarks][%s][k] %d %d %d %d %d %d %d %d",
+#elif defined(__optimsoc__)
+		"[benchmarks][%s][k] %d %d %d %d %d %d %d %d",
+#else
+		"[benchmarks][%s][k] %d %d",
+#endif
+		name,
+		it,
+#if defined(__mppa256__)
+		UINT32(kland_stats[0]),
+		UINT32(kland_stats[1]),
+		UINT32(kland_stats[2]),
+		UINT32(kland_stats[3]),
+		UINT32(kland_stats[4]),
+		UINT32(kland_stats[5]),
+		UINT32(kland_stats[6])
+#elif defined(__optimsoc__)
+		UINT32(kland_stats[0]),
+		UINT32(kland_stats[1]),
+		UINT32(kland_stats[2]),
+		UINT32(kland_stats[3]),
+		UINT32(kland_stats[4]),
+		UINT32(kland_stats[5]),
+		UINT32(kland_stats[6])
+#else
+		UINT32(kland_stats[0])
 #endif
 	);
 }
@@ -131,7 +168,8 @@ static void benchmark_dump_stats(int it, const char *name, uint64_t *stats)
  */
 int __main2(int argc, const char *argv[])
 {
-	uint64_t stats[BENCHMARK_PERF_EVENTS];
+	uint64_t uland_stats[BENCHMARK_PERF_EVENTS];
+	uint64_t kland_stats[BENCHMARK_PERF_EVENTS];
 
 	((void) argc);
 	((void) argv);
@@ -147,12 +185,22 @@ int __main2(int argc, const char *argv[])
 		for (int j = 0; j < BENCHMARK_PERF_EVENTS; j++)
 		{
 			kstats(NULL, perf_events[j]);
+			perf_start(0, perf_events[j]);
 
-			kstats(&stats[j], 0);
+			kstats(&kland_stats[j], 0);
+			perf_stop(0);
+			uland_stats[j] = perf_read(0);
 		}
 
 		if (i >= SKIP)
-			benchmark_dump_stats(i - SKIP, BENCHMARK_NAME, stats);
+		{
+			benchmark_dump_stats(
+				i - SKIP,
+				BENCHMARK_NAME,
+				uland_stats,
+				kland_stats
+			);
+		}
 	}
 
 	uprintf(HLINE);
