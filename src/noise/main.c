@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 
+#include <nanvix/sys/noc.h>
 #include <nanvix/sys/thread.h>
 #include <nanvix/ulib.h>
 #include <posix/stdint.h>
@@ -264,6 +265,9 @@ int __main2(int argc, const char *argv[])
 	((void) argv);
 
 #ifndef __qemu_riscv32__
+
+	if (knode_get_num() != PROCESSOR_NODENUM_MASTER)
+		return (0);
 
 	uprintf(HLINE);
 
