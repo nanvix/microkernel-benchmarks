@@ -54,13 +54,13 @@ SRC += $(wildcard *.c)
 OBJ += $(SRC:.c=.$(OBJ_SUFFIX).o)
 
 # Binary File
-ELFBIN = server.$(OBJ_SUFFIX)
+ELFBIN = stream.$(OBJ_SUFFIX)
 
 # Image Source
-IMGSRC = $(IMGDIR)/server-$(TARGET).img
+IMGSRC = $(IMGDIR)/stream-$(TARGET).img
 
 # Image Name
-IMAGE = $(ROOTDIR)/server.img
+IMAGE = $(ROOTDIR)/stream.img
 
 #===============================================================================
 

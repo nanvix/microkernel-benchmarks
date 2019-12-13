@@ -27,21 +27,41 @@
 #===============================================================================
 
 # Builds Binary Files
-all: all-buffer all-fork-join all-kcall-local all-kcall-remote all-noise \
-		all-perf all-server all-stream
+all: all-apps all-buffer all-fork-join all-kcall-local all-kcall-remote all-noise \
+		all-perf all-server
 
 # Cleans Object Files
-clean: clean-buffer clean-fork-join clean-kcall-local clean-kcall-remote \
-		clean-noise clean-perf clean-server clean-stream
+clean: clean-apps clean-buffer clean-fork-join clean-kcall-local clean-kcall-remote \
+		clean-noise clean-perf clean-server
 
 # Cleans Everything
-distclean: distclean-buffer distclean-fork-join distclean-kcall-local \
+distclean: distclean-apps distclean-buffer distclean-fork-join distclean-kcall-local \
 		distclean-kcall-remote distclean-noise distclean-perf \
-		distclean-server distclean-stream
+		distclean-server
 
 # Builds multibinary images
-image: image-buffer image-fork-join image-kcall-local image-kcall-remote \
-		image-noise image-perf image-server image-stream
+image: image-apps image-buffer image-fork-join image-kcall-local image-kcall-remote \
+		image-noise image-perf image-server
+
+#===============================================================================
+# apps
+#===============================================================================
+
+# Builds apps.
+all-apps:
+	@$(MAKE) -C apps all
+
+# Cleans object files.
+clean-apps:
+	@$(MAKE) -C apps clean
+
+# Cleans object files.
+distclean-apps:
+	@$(MAKE) -C apps distclean
+
+# Builds multibinary image.
+image-apps:
+	@$(MAKE) -C apps image
 
 #===============================================================================
 # buffer
@@ -182,26 +202,6 @@ distclean-server:
 # Builds multibinary image.
 image-server:
 	@$(MAKE) -C server image
-
-#===============================================================================
-# stream
-#===============================================================================
-
-# Builds stream.
-all-stream:
-	@$(MAKE) -C stream all
-
-# Cleans object files.
-clean-stream:
-	@$(MAKE) -C stream clean
-
-# Cleans object files.
-distclean-stream:
-	@$(MAKE) -C stream distclean
-
-# Builds multibinary image.
-image-stream:
-	@$(MAKE) -C stream image
 
 #===============================================================================
 # upcall
