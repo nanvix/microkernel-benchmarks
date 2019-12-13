@@ -28,20 +28,20 @@
 
 # Builds Binary Files
 all: all-buffer all-fork-join all-kcall-local all-kcall-remote all-noise \
-		all-perf all-server all-stream all-upcall
+		all-perf all-server all-stream
 
 # Cleans Object Files
 clean: clean-buffer clean-fork-join clean-kcall-local clean-kcall-remote \
-		clean-noise clean-perf clean-server clean-stream clean-upcall
+		clean-noise clean-perf clean-server clean-stream
 
 # Cleans Everything
 distclean: distclean-buffer distclean-fork-join distclean-kcall-local \
 		distclean-kcall-remote distclean-noise distclean-perf \
-		distclean-server distclean-stream distclean-upcall
+		distclean-server distclean-stream
 
 # Builds multibinary images
 image: image-buffer image-fork-join image-kcall-local image-kcall-remote \
-		image-noise image-perf image-server image-stream image-upcall
+		image-noise image-perf image-server image-stream
 
 #===============================================================================
 # buffer
