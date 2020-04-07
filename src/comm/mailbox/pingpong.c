@@ -29,42 +29,60 @@
 
 #if __TARGET_HAS_MAILBOX
 
-static char message_in[MESSAGE_SIZE];
-static char message_out[MESSAGE_SIZE];
+static struct benchmark_result result;
+static char message_in[KMAILBOX_MESSAGE_SIZE];
+static char message_out[KMAILBOX_MESSAGE_SIZE];
 
 static inline void do_master(const int * nodes, int nslaves)
 {
 	int local;
 	int inbox;
-	int outbox;
+	int outbox[PROCESSOR_NOC_NODES_NUM];
 
-	local  = nodes[0];
+	local = nodes[0];
 
-	umemset(message_out, local, MAILBOX_MSG_SIZE);
+	umemset(message_out, local, KMAILBOX_MESSAGE_SIZE);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
 		uprintf("Iteration %d/%d", i, NITERATIONS);
 
-		KASSERT((inbox = kmailbox_create(local)) >= 0);
+		KASSERT((inbox = kmailbox_create(local, 0)) >= 0);
 
-			barrier();
+		/* Opens an outbox for each slave. */
+		for (int j = 1; j <= nslaves; ++j)
+			KASSERT((outbox[j] = kmailbox_open(nodes[j], 0)) >= 0);
 
-			for (int j = 1; j <= nslaves; ++j)
-			{
-				umemset(message_in, local, MAILBOX_MSG_SIZE);
+		barrier_nodes();
 
-				KASSERT(kmailbox_read(inbox, message_in, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+		for (int j = 1; j <= nslaves; ++j)
+		{
+			umemset(message_in, local, KMAILBOX_MESSAGE_SIZE);
 
-				int found = 0;
-				for (int k = 1; k <= nslaves; ++k)
-					found |= (message_in[0] == nodes[k]);
-				KASSERT(found != 0);
+			KASSERT(kmailbox_read(inbox, message_in, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
 
-				KASSERT((outbox = kmailbox_open(message_in[0])) >= 0);
-					KASSERT(kmailbox_write(outbox, message_out, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
-				KASSERT(kmailbox_close(outbox) == 0);
-			}
+			int found = 0;
+			for (int k = 1; k <= nslaves; ++k)
+				found |= (message_in[0] == nodes[k]);
+			KASSERT(found != 0);
+
+			KASSERT(kmailbox_write(outbox[j], message_out, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
+		}
+
+		/* Closes outboxes. */
+		for (int j = 1; j <= nslaves; ++j)
+			KASSERT(kmailbox_close(outbox[j]) == 0);
+
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("mailbox;pingpong;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
 
 		KASSERT(kmailbox_unlink(inbox) == 0);
 	}
@@ -80,23 +98,34 @@ static inline void do_slave(const int * nodes, int index)
 	local  = nodes[index];
 	remote = nodes[0];
 
-	umemset(message_out, local, MAILBOX_MSG_SIZE);
+	umemset(message_out, local, KMAILBOX_MESSAGE_SIZE);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
-		KASSERT((inbox = kmailbox_create(local)) >= 0);
+		KASSERT((inbox = kmailbox_create(local, 0)) >= 0);
 
-		umemset(message_in, 0, MAILBOX_MSG_SIZE);
+		umemset(message_in, 0, KMAILBOX_MESSAGE_SIZE);
 
-		barrier();
+		barrier_nodes();
 
-		KASSERT((outbox = kmailbox_open(remote)) >= 0);
+		KASSERT((outbox = kmailbox_open(remote, 0)) >= 0);
 
-			KASSERT(kmailbox_write(outbox, message_out, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
-			KASSERT(kmailbox_read(inbox,   message_in,  MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+			KASSERT(kmailbox_write(outbox, message_out, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
+			KASSERT(kmailbox_read(inbox,   message_in,  KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
 
-			for (unsigned j = 0; j < MAILBOX_MSG_SIZE; ++j)
+			for (unsigned j = 0; j < KMAILBOX_MESSAGE_SIZE; ++j)
 				KASSERT(message_in[j] == remote);
+		
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("mailbox;pingpong;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
 
 		KASSERT(kmailbox_close(outbox) == 0);
 		KASSERT(kmailbox_unlink(inbox) == 0);
@@ -127,7 +156,7 @@ int do_pingpong(const int * nodes, int nnodes, int index, int message_size)
 		uprintf("[mailbox][pingpong] Finished.");
 
 	/* Synchronizes. */
-	barrier();
+	barrier_nodes();
 
 	if (index == 0)
 		uprintf("[mailbox][pingpong] Successfuly completed.");
@@ -153,4 +182,5 @@ int do_pingpong(const int * nodes, int nnodes, int index, int message_size)
 
 	return (0);
 }
-#endif
+
+#endif /* __TARGET_HAS_MAILBOX */
