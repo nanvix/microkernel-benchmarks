@@ -29,7 +29,8 @@
 
 #if __TARGET_HAS_PORTAL
 
-static char messages[NUM_CLUSTERS * MESSAGE_SIZE] ALIGN(sizeof(uint64_t));
+static struct benchmark_result result;
+static char messages[MAX_NUM_NODES * MAX_MESSAGE_SIZE];
 
 static inline void do_work(const int * nodes, int nnodes, int index, int message_size)
 {
@@ -41,7 +42,7 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 
 	local = nodes[index];
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
 		if (index == 0)
 			uprintf("Iteration %d/%d", i, NITERATIONS);
@@ -52,13 +53,10 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 		/* Prepares the transfer data. */
 		umemset(&messages[index * message_size], (char) local, message_size);
 
-		KASSERT((portal_in = kportal_create(local)) >= 0);
+		KASSERT((portal_in = kportal_create(local, 0)) >= 0);
 
 			for (int j = 1; j < nnodes; ++j)
 			{
-				if (index == 0)
-					uprintf("Communication %d/%d", j, (nnodes - 1));
-
 				/**
 				 * Algorithm behavior:
 				 * communication occurs in distinct pairs of reading and writing.
@@ -67,9 +65,9 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 				read_from = (index - j) < 0 ? (nnodes + (index - j)) : (index - j);
 				write_to  = (index + j) < nnodes ? (index + j) : (index + j) - nnodes; /* Equivalent: (index + j) % nnodes */
 
-				KASSERT((portal_out = kportal_open(local, nodes[write_to])) >= 0);
+				KASSERT((portal_out = kportal_open(local, nodes[write_to], 0)) >= 0);
 
-				barrier();
+				barrier_nodes();
 
 				/* Master */
 				if (index == 0)
@@ -84,7 +82,7 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 					);
 
 					/* Sync read. */
-					KASSERT(kportal_allow(portal_in, nodes[read_from]) == 0);
+					KASSERT(kportal_allow(portal_in, nodes[read_from], 0) == 0);
 					KASSERT(
 						kportal_read(
 							portal_in,
@@ -99,7 +97,7 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 				{
 
 					/* Sync read. */
-					KASSERT(kportal_allow(portal_in, nodes[read_from]) == 0);
+					KASSERT(kportal_allow(portal_in, nodes[read_from], 0) == 0);
 					KASSERT(
 						kportal_read(
 							portal_in,
@@ -131,6 +129,17 @@ static inline void do_work(const int * nodes, int nnodes, int index, int message
 					KASSERT(curr_message[k] == value);
 			}
 
+		KASSERT(kportal_ioctl(portal_in, KPORTAL_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kportal_ioctl(portal_in, KPORTAL_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("portal;allgather;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
+
 		KASSERT(kportal_unlink(portal_in) == 0);
 	}
 }
@@ -154,7 +163,7 @@ int do_allgather(const int * nodes, int nnodes, int index, int message_size)
 		uprintf("[portal][allgather] Finished.");
 
 	/* Synchronizes. */
-	barrier();
+	barrier_nodes();
 
 	if (index == 0)
 		uprintf("[portal][allgather] Successfuly completed.");
@@ -180,4 +189,5 @@ int do_allgather(const int * nodes, int nnodes, int index, int message_size)
 
 	return (0);
 }
-#endif
+
+#endif /* __TARGET_HAS_PORTAL */

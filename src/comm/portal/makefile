@@ -49,6 +49,7 @@ LIBS += $(LIBDIR)/$(BARELIB) $(THEIR_LIBS)
 
 # C Source Files
 SRC += $(wildcard *.c)
+SRC += $(wildcard ../main.c)
 SRC += $(wildcard ../libs/*.c)
 
 # Object Files
