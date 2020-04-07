@@ -26,19 +26,27 @@
 all:
 	$(MAKE) -C mailbox all
 	$(MAKE) -C portal all
+	$(MAKE) -C stress all
+	$(MAKE) -C hpcs all
 
 # Builds multibinary image.
 image:
 	$(MAKE) -C mailbox image
 	$(MAKE) -C portal image
+	$(MAKE) -C stress image
+	$(MAKE) -C hpcs image
 
 # Cleans All Object Files
 clean:
 	$(MAKE) -C mailbox clean
 	$(MAKE) -C portal clean
+	$(MAKE) -C stress clean
+	$(MAKE) -C hpcs clean
 
 # Cleans Everything
 distclean: clean
 	$(MAKE) -C mailbox distclean
 	$(MAKE) -C portal distclean
+	$(MAKE) -C stress distclean
+	$(MAKE) -C hpcs distclean
 
