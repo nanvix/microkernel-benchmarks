@@ -29,7 +29,8 @@
 
 #if __TARGET_HAS_MAILBOX
 
-static char message[MAILBOX_MSG_SIZE];
+static struct benchmark_result result;
+static char message[KMAILBOX_MESSAGE_SIZE];
 
 static inline int build_footprint(const int * nodes, int nslaves, int local)
 {
@@ -51,27 +52,38 @@ static inline void do_master(const int * nodes, int nslaves)
 	local = nodes[0];
 	expected = build_footprint(nodes, (nslaves + 1), local);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
 		uprintf("Iteration %d/%d", i, NITERATIONS);
 
-		KASSERT((inbox = kmailbox_create(local)) >= 0);
+		KASSERT((inbox = kmailbox_create(local, 0)) >= 0);
 
 			received = 0;
 
-			barrier();
+			barrier_nodes();
 
 			/* Reads nslaves messages. */
 			for (int j = 0; j < nslaves; ++j)
 			{
-				umemset(message, (-1), MAILBOX_MSG_SIZE);
+				umemset(message, (-1), KMAILBOX_MESSAGE_SIZE);
 
-				KASSERT(kmailbox_read(inbox, message, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+				KASSERT(kmailbox_read(inbox, message, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
 
 				received |= (1 << message[0]);
 			}
 
 			KASSERT(expected == received);
+		
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("mailbox;gather;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
 
 		KASSERT(kmailbox_unlink(inbox) == 0);
 	}
@@ -86,15 +98,15 @@ static inline void do_slave(const int * nodes, int index)
 	local  = nodes[index];
 	remote = nodes[0];
 
-	umemset(message, local, MAILBOX_MSG_SIZE);
+	umemset(message, local, KMAILBOX_MESSAGE_SIZE);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
-		KASSERT((outbox = kmailbox_open(remote)) >= 0);
+		KASSERT((outbox = kmailbox_open(remote, 0)) >= 0);
 
-			barrier();
+			barrier_nodes();
 
-			KASSERT(kmailbox_write(outbox, message, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+			KASSERT(kmailbox_write(outbox, message, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
 
 		KASSERT(kmailbox_close(outbox) == 0);
 	}
@@ -124,7 +136,7 @@ int do_gather(const int * nodes, int nnodes, int index, int message_size)
 		uprintf("[mailbox][gather] Finished.");
 
 	/* Synchronizes. */
-	barrier();
+	barrier_nodes();
 
 	if (index == 0)
 		uprintf("[mailbox][gather] Successfuly completed.");
@@ -150,4 +162,5 @@ int do_gather(const int * nodes, int nnodes, int index, int message_size)
 
 	return (0);
 }
-#endif
+
+#endif /* __TARGET_HAS_MAILBOX */

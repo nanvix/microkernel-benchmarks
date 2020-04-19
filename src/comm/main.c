@@ -25,27 +25,9 @@
 #include <nanvix/sys/noc.h>
 #include <nanvix/sys/perf.h>
 
-#include "../comm.h"
+#include "comm.h"
 
-#if __TARGET_HAS_PORTAL
-
-/**
- * @brief Executable routine
- */
-int (*enabled_routine_fn)(const int *, int, int, int) = &do_allgather;
-
-/**
- * @brief Involved clusters
- */
-#ifdef __mppa256__
-	const int nodenums[NUM_CLUSTERS] ALIGN(sizeof(uint64_t)) = {
-		0, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
-	};
-#else
-	const int nodenums[NUM_CLUSTERS] = {
-		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
-	};
-#endif
+#if __TARGET_HAS_PORTAL || __TARGET_HAS_MAILBOX
 
 /**
  * @brief Horizontal line
@@ -75,7 +57,7 @@ int __main2(int argc, const char *argv[])
 	nodenum = knode_get_num();
 
 	/* Finds the index of local node on nodenums vector. */
-	for (int i = 0; i < NUM_CLUSTERS; ++i)
+	for (int i = 0; i < NUM_NODES; ++i)
 	{
 		if (nodenum == nodenums[i])
 		{
@@ -84,14 +66,14 @@ int __main2(int argc, const char *argv[])
 		}
 	}
 
-	if (nodenum == PROCESSOR_CLUSTERNUM_MASTER)
+	if (nodenum == PROCESSOR_NODENUM_MASTER)
 		uprintf(HLINE);
 
 	/* Boot synchronize. */
 	__stdsync_setup();
 
-		if (nodenum == PROCESSOR_CLUSTERNUM_MASTER)
-			uprintf("[portal] Fence.");
+		if (nodenum == PROCESSOR_NODENUM_MASTER)
+			uprintf("Fence.");
 
 		/* Sync all clusters */
 		stdsync_fence();
@@ -108,19 +90,19 @@ int __main2(int argc, const char *argv[])
 		 * the stdsync must be cleanup before call the barruer_setup
 		 * because it uses the same local resources.
 		 */
-		barrier_setup(nodenums, NUM_CLUSTERS, (index == 0));
+		barrier_nodes_setup(nodenums, NUM_NODES, (index == 0));
 
 			/* Do the routine. */
-			enabled_routine_fn(nodenums, NUM_CLUSTERS, index, MESSAGE_SIZE);
+			enabled_routine_fn(nodenums, NUM_NODES, index, MESSAGE_SIZE);
 
 			/* Waits everyone finishes the routine. */
-			barrier();
+			barrier_nodes();
 
 		/* Destroy barrier. */
-		barrier_cleanup();
+		barrier_nodes_cleanup();
 	}
 
-	if (nodenum == PROCESSOR_CLUSTERNUM_MASTER)
+	if (nodenum == PROCESSOR_NODENUM_MASTER)
 		uprintf(HLINE);
 
 	return (0);

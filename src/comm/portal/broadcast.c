@@ -29,39 +29,39 @@
 
 #if __TARGET_HAS_PORTAL
 
-static char message[MESSAGE_SIZE] ALIGN(sizeof(uint64_t));
+static struct benchmark_result result;
+static char message[MAX_MESSAGE_SIZE] ALIGN(sizeof(uint64_t));
 
 static inline void do_master(const int * nodes, int nslaves, int message_size)
 {
 	int local;
-	int portal_out;
+	int portal_out[PROCESSOR_NOC_NODES_NUM];
 
 	local = nodes[0];
 
 	umemset(message, 1, message_size);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
 		uprintf("Iteration %d/%d", i, NITERATIONS);
 
+		/* Open connector. */
 		for (int j = 1; j <= nslaves; ++j)
-		{
-			/* Open connector. */
-			KASSERT((portal_out = kportal_open(local, nodes[j])) >= 0);
+			KASSERT((portal_out[j] = kportal_open(local, nodes[j], 0)) >= 0);
+		
+		/* Receptor needs to wait for your relative portal to be opened. */
+		barrier_nodes();
 
-			/* Receptor needs to wait for your relative portal to be opened. */
-			barrier();
+		/* Sends the message for current slave. */
+		for (int j = 1; j <= nslaves; ++j)
+			KASSERT(kportal_write(portal_out[j], message, message_size) == message_size);
 
-			/* Sends the message for current slave. */
-			KASSERT(kportal_write(portal_out, message, message_size) == message_size);
-
-			/* Closes connector. */
-			KASSERT(kportal_close(portal_out) == 0);
-		}
+		for (int j = 1; j <= nslaves; ++j)	
+			KASSERT(kportal_close(portal_out[j]) == 0);
 	}
 }
 
-static inline void do_slave(const int * nodes, int nslaves, int index, int message_size)
+static inline void do_slave(const int * nodes, int index, int message_size)
 {
 	int local;
 	int remote;
@@ -70,31 +70,31 @@ static inline void do_slave(const int * nodes, int nslaves, int index, int messa
 	local  = nodes[index];
 	remote = nodes[0];
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
-		KASSERT((portal_in = kportal_create(local)) >= 0);
+		KASSERT((portal_in = kportal_create(local, 0)) >= 0);
 
 		umemset(message, 0, message_size);
 
-		for (int j = 1; j <= nslaves; ++j)
-		{
-			/**
-			 * Receptor needs to wait for your relative portal to be opened because
-			 * the emitter can lose your allow signal if it does it before the opened.
-			 */
-			barrier();
+		barrier_nodes();
 
-			/* Is not my time? */
-			if (index != j)
-				continue;
+		/* Receives the message. */
+		KASSERT(kportal_allow(portal_in, remote, 0) == 0);
+		KASSERT(kportal_read(portal_in, message, message_size) == message_size);
 
-			/* Receives the message. */
-			KASSERT(kportal_allow(portal_in, remote) == 0);
-			KASSERT(kportal_read(portal_in, message, message_size) == message_size);
+		for (int k = 0; k < message_size; ++k)
+			KASSERT(message[k] == 1);
 
-			for (int k = 0; k < message_size; ++k)
-				KASSERT(message[k] == 1);
-		}
+		KASSERT(kportal_ioctl(portal_in, KPORTAL_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kportal_ioctl(portal_in, KPORTAL_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("portal;broadcast;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
 
 		KASSERT(kportal_unlink(portal_in) == 0);
 	}
@@ -116,13 +116,13 @@ int do_broadcast(const int * nodes, int nnodes, int index, int message_size)
 	if (index == 0)
 		do_master(nodes, (nnodes - 1), message_size);
 	else
-		do_slave(nodes, (nnodes - 1), index, message_size);
+		do_slave(nodes, index, message_size);
 
 	if (index == 0)
 		uprintf("[portal][broadcast] Finished.");
 
 	/* Synchronizes. */
-	barrier();
+	barrier_nodes();
 
 	if (index == 0)
 		uprintf("[portal][broadcast] Successfuly completed.");
@@ -148,4 +148,5 @@ int do_broadcast(const int * nodes, int nnodes, int index, int message_size)
 
 	return (0);
 }
-#endif
+
+#endif /* __TARGET_HAS_PORTAL */

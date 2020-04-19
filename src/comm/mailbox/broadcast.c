@@ -29,34 +29,35 @@
 
 #if __TARGET_HAS_MAILBOX
 
-static char message[MAILBOX_MSG_SIZE];
+static struct benchmark_result result;
+static char message[KMAILBOX_MESSAGE_SIZE];
 
 static inline void do_master(const int * nodes, int nslaves)
 {
 	int local;
-	int outbox;
+	int outbox[PROCESSOR_NOC_NODES_NUM];
 
 	local = nodes[0];
 
-	umemset(message, local, MAILBOX_MSG_SIZE);
+	umemset(message, local, KMAILBOX_MESSAGE_SIZE);
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
 		uprintf("Iteration %d/%d", i, NITERATIONS);
 
-		barrier();
-
+		/* Opens connectors. */
 		for (int j = 1; j <= nslaves; ++j)
-		{
-			/* Opens connector. */
-			KASSERT((outbox = kmailbox_open(nodes[j])) >= 0);
+			KASSERT((outbox[j] = kmailbox_open(nodes[j], 0)) >= 0);
 
-			/* Sends the message for current slave. */
-			KASSERT(kmailbox_write(outbox, message, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+		barrier_nodes();
 
-			/* Closes connector. */
-			KASSERT(kmailbox_close(outbox) == 0);
-		}
+		/* Sends the message for all slaves. */
+		for (int j = 1; j <= nslaves; ++j)
+			KASSERT(kmailbox_write(outbox[j], message, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
+
+		/* Closes connectors. */
+		for (int j = 1; j <= nslaves; ++j)
+			KASSERT(kmailbox_close(outbox[j]) == 0);
 	}
 }
 
@@ -69,18 +70,29 @@ static inline void do_slave(const int * nodes, int index)
 	local  = nodes[index];
 	remote = nodes[0];
 
-	for (unsigned i = 1; i <= NITERATIONS; ++i)
+	for (unsigned int i = 1; i <= NITERATIONS; ++i)
 	{
-		KASSERT((inbox = kmailbox_create(local)) >= 0);
+		KASSERT((inbox = kmailbox_create(local, 0)) >= 0);
 
-			umemset(message, 0, MAILBOX_MSG_SIZE);
+			umemset(message, 0, KMAILBOX_MESSAGE_SIZE);
 
-			barrier();
+			barrier_nodes();
 
-			KASSERT(kmailbox_read(inbox, message, MAILBOX_MSG_SIZE) == MAILBOX_MSG_SIZE);
+			KASSERT(kmailbox_read(inbox, message, KMAILBOX_MESSAGE_SIZE) == KMAILBOX_MESSAGE_SIZE);
 
-			for (int j = 0; j < MAILBOX_MSG_SIZE; ++j)
+			for (unsigned j = 0; j < KMAILBOX_MESSAGE_SIZE; ++j)
 				KASSERT(message[j] == remote);
+			
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+
+		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
+		uprintf("mailbox;broadcast;%d;%d;%l;%l",
+			i,
+			local,
+			result.latency,
+			result.volume
+		);
 
 		KASSERT(kmailbox_unlink(inbox) == 0);
 	}
@@ -110,7 +122,7 @@ int do_broadcast(const int * nodes, int nnodes, int index, int message_size)
 		uprintf("[mailbox][broadcast] Finished.");
 
 	/* Synchronizes. */
-	barrier();
+	barrier_nodes();
 
 	if (index == 0)
 		uprintf("[mailbox][broadcast] Successfuly completed.");
@@ -136,4 +148,5 @@ int do_broadcast(const int * nodes, int nnodes, int index, int message_size)
 
 	return (0);
 }
-#endif
+
+#endif /* __TARGET_HAS_MAILBOX */

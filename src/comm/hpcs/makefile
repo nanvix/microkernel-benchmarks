@@ -56,13 +56,13 @@ SRC += $(wildcard ../libs/*.c)
 OBJ += $(SRC:.c=.$(OBJ_SUFFIX).o)
 
 # Binary File
-ELFBIN = mailbox.$(OBJ_SUFFIX)
+ELFBIN = hpcs.$(OBJ_SUFFIX)
 
 # Image Source
-IMGSRC = $(IMGDIR)/mailbox-$(TARGET).img
+IMGSRC = $(IMGDIR)/hpcs-$(TARGET).img
 
 # Image Name
-IMAGE = $(ROOTDIR)/mailbox.img
+IMAGE = $(ROOTDIR)/hpcs.img
 
 #===============================================================================
 

@@ -30,16 +30,6 @@
     #include <nanvix/ulib.h>
     #include <kbench.h>
 
-	/**
-     * @name Collective communication routines functions
-     */
-    /**@{*/
-    extern int do_broadcast(const int *, int, int, int);
-    extern int do_gather(const int *, int, int, int);
-    extern int do_allgather(const int *, int, int, int);
-    extern int do_pingpong(const int *, int, int, int);
-    /**@}*/
-
     /**
      * @brief Executable routine
      */
@@ -49,22 +39,57 @@
      * @name Configuration of the routines
      */
     /**@{*/
-    #define NUM_CLUSTERS 17
-    extern const int nodenums[NUM_CLUSTERS];
+    extern const int NUM_NODES;
+    extern const int MESSAGE_SIZE;
+    extern const int * nodenums;
     /**@}*/
 
     /**
      * @brief Portal message size
      */
-    #define MESSAGE_SIZE (1 * KB)
+    #define MAX_MESSAGE_SIZE (512)
+
+    /**
+     * @brief Portal message size
+     */
+    #define MAX_NUM_NODES 18
 
     /**
      * @name Barrier functions
      */
     /**@{*/
-    extern void barrier_setup(const int * nodes, int nnodes, int is_master);
-    extern void barrier(void);
-    extern void barrier_cleanup(void);
+    extern void barrier_nodes_setup(const int * nodes, int nnodes, int is_master);
+    extern void barrier_nodes(void);
+    extern void barrier_nodes_cleanup(void);
+    extern void barrier_cores_setup(int tid, int ncores);
+    extern void barrier_cores(void);
+    extern void barrier_cores_cleanup(int tid);
+    /**@}*/
+
+    /**
+     * @brief Structure to benchmark results
+     */
+    struct benchmark_result
+	{
+		size_t volume;
+		uint64_t latency;
+	};
+
+    struct saturation_result
+	{
+		uint64_t opening;
+        uint64_t requesting;
+        uint64_t communication;
+        uint64_t closing;
+        uint64_t message_size;
+	};
+
+    /**
+     * @name Result functions
+     */
+    /**@{*/
+    extern void result_write(struct saturation_result * result);
+    extern void result_read(int nslaves, struct saturation_result * result);
     /**@}*/
 
     /**
