@@ -74,7 +74,7 @@ export LIBC       := libc-$(TARGET).a
 # Target-Specific Make Rules
 #===============================================================================
 
-include $(MAKEDIR)/makefile
+include $(MAKEDIR)/makefile.microkernel-benchmarks
 
 #===============================================================================
 # Toolchain Configuration
@@ -92,6 +92,9 @@ export CFLAGS += -Wno-unused-function
 export CFLAGS += -I $(INCDIR)
 export CFLAGS += -I $(ROOTDIR)/src/lwip/src/include
 export CFLAGS += $(ADDONS)
+
+# Enable sync and portal implementation that uses mailboxes
+export CFLAGS += -D__NANVIX_IKC_USES_ONLY_MAILBOX=0
 
 # Additional C Flags
 include $(BUILDDIR)/makefile.cflags
@@ -128,7 +131,13 @@ distclean: distclean-target
 # Contrib Install and Uninstall Rules
 #===============================================================================
 
-include $(BUILDDIR)/makefile.contrib
+include $(BUILDDIR)/makefile.microkernel-benchmarks
+
+#===============================================================================
+# Install and Uninstall Rules
+#===============================================================================
+
+include $(BUILDDIR)/makefile.install
 
 #===============================================================================
 # Debug and Run Rules

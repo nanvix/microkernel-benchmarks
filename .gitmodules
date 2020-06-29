@@ -6,3 +6,6 @@
 	path = utils
 	url = https://github.com/nanvix/utils.git
 	branch = unstable
+[submodule "build"]
+	path = build
+	url = https://github.com/nanvix/build.git
