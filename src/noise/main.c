@@ -27,6 +27,8 @@
 #include <posix/stdint.h>
 #include <kbench.h>
 
+#ifndef __qemu_riscv32__
+
 /**
  * @name Benchmark Parameters
  */
@@ -244,6 +246,8 @@ static void benchmark_noise(int nworkers, int nidle)
 		kthread_join(tid_idle[i], NULL);
 }
 
+#endif
+
 /*============================================================================*
  * Benchmark Driver                                                           *
  *============================================================================*/
@@ -258,6 +262,8 @@ int __main2(int argc, const char *argv[])
 {
 	((void) argc);
 	((void) argv);
+
+#ifndef __qemu_riscv32__
 
 	uprintf(HLINE);
 
@@ -279,6 +285,8 @@ int __main2(int argc, const char *argv[])
 #endif
 
 	uprintf(HLINE);
+
+#endif
 
 	return (0);
 }
