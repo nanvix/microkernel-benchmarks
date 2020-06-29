@@ -30,6 +30,8 @@
 #include <posix/stdint.h>
 #include <kbench.h>
 
+#ifndef __qemu_riscv32__
+
 /**
  * @name Benchmark Parameters
  */
@@ -366,6 +368,8 @@ static void server(int nworkers, int nrequests)
 	server_shutdown();
 }
 
+#endif
+
 /*============================================================================*
  * Benchmark Driver                                                           *
  *============================================================================*/
@@ -381,6 +385,8 @@ int __main2(int argc, const char *argv[])
 	((void) argc);
 	((void) argv);
 
+#ifndef __qemu_riscv32__
+
 	uprintf(HLINE);
 
 #ifndef NDEBUG
@@ -395,6 +401,8 @@ int __main2(int argc, const char *argv[])
 #endif
 
 	uprintf(HLINE);
+
+#endif
 
 	return (0);
 }
