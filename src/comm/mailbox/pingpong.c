@@ -73,8 +73,8 @@ static inline void do_master(const int * nodes, int nslaves)
 		for (int j = 1; j <= nslaves; ++j)
 			KASSERT(kmailbox_close(outbox[j]) == 0);
 
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
 
 		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
 		uprintf("mailbox;pingpong;%d;%d;%l;%l",
@@ -116,8 +116,8 @@ static inline void do_slave(const int * nodes, int index)
 			for (unsigned j = 0; j < KMAILBOX_MESSAGE_SIZE; ++j)
 				KASSERT(message_in[j] == remote);
 		
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
 
 		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
 		uprintf("mailbox;pingpong;%d;%d;%l;%l",

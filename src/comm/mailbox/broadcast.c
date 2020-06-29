@@ -83,8 +83,8 @@ static inline void do_slave(const int * nodes, int index)
 			for (unsigned j = 0; j < KMAILBOX_MESSAGE_SIZE; ++j)
 				KASSERT(message[j] == remote);
 			
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
 
 		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
 		uprintf("mailbox;broadcast;%d;%d;%l;%l",

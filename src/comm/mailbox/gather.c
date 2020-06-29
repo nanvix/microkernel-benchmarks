@@ -74,8 +74,8 @@ static inline void do_master(const int * nodes, int nslaves)
 
 			KASSERT(expected == received);
 		
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
 
 		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
 		uprintf("mailbox;gather;%d;%d;%l;%l",

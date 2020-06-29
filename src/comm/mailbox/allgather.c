@@ -95,8 +95,8 @@ static inline void do_work(const int * nodes, int nnodes, int index)
 		for (int j = 0; j < (nnodes - 1); ++j)
 			KASSERT(kmailbox_close(outbox[j]) == 0);
 		
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
-		KASSERT(kmailbox_ioctl(inbox, MAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_LATENCY, &result.latency) == 0);
+		KASSERT(kmailbox_ioctl(inbox, KMAILBOX_IOCTL_GET_VOLUME, &result.volume) == 0);
 
 		/* Header: "benchmark;routine;iteration;nodenum;latency;volume" */
 		uprintf("mailbox;allgather;%d;%d;%l;%l",
