@@ -22,97 +22,23 @@
 # SOFTWARE.
 #
 
-#===============================================================================
-# Toolchain Configuration
-#===============================================================================
-
-# Compiler Options
-ifneq ($(LIBLWIP),)
-CFLAGS += -I $(INCDIR)/posix
-endif
-
-# Libraries
-LIBS := -Wl,--whole-archive
-LIBS += $(LIBDIR)/$(LIBHAL)
-LIBS += $(LIBDIR)/$(LIBKERNEL)
-LIBS += -Wl,--no-whole-archive
-LIBS += $(LIBDIR)/$(LIBC)
-LIBS += $(LIBDIR)/$(LIBNANVIX)
-ifneq ($(LIBLWIP),)
-LIBS += $(LIBDIR)/$(LIBLWIP)
-endif
-LIBS += $(LIBDIR)/$(BARELIB) $(THEIR_LIBS)
+include $(BUILDDIR)/makefile.config
 
 #===============================================================================
-# Sources, Objects and Binary
+# Binaries Sources and Objects
 #===============================================================================
+
+# Binary
+EXEC = comm-stress.$(OBJ_SUFFIX)
 
 # C Source Files
-SRC += $(wildcard *.c)
-SRC += $(wildcard ../main.c)
-SRC += $(wildcard ../libs/*.c)
+SRC += $(wildcard *.c)         \
+       $(wildcard ../main.c)   \
+       $(wildcard ../libs/*.c)
 
 # Object Files
-OBJ += $(SRC:.c=.$(OBJ_SUFFIX).o)
-
-# Binary File
-ELFBIN = stress.$(OBJ_SUFFIX)
-
-# Image Source
-IMGSRC = $(IMGDIR)/stress-$(TARGET).img
-
-# Image Name
-IMAGE = $(ROOTDIR)/stress.img
+OBJ = $(SRC:.c=.$(OBJ_SUFFIX).o)
 
 #===============================================================================
 
-ifeq ($(TARGET),unix64)
-LINKER_SCRIPT=
-else
-LINKER_SCRIPT = -L $(LINKERDIR)/ -T link.ld
-endif
-
-# Builds everything.
-all: binary
-
-# Builds multibinary image.
-image:
-	@ln -s $(BINDIR)
-	@bash $(TOOLSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(IMGSRC)
-	@rm bin
-
-# Builds binary.
-binary: $(OBJ)
-ifeq ($(VERBOSE), no)
-	@echo [CC] $(ELFBIN)
-	@$(CC) $(LDFLAGS) $(LINKER_SCRIPT) -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
-else
-	$(CC) $(LDFLAGS) $(LINKER_SCRIPT) -o $(BINDIR)/$(ELFBIN) $(OBJ) $(LIBS)
-endif
-
-# Cleans All Object Files
-clean:
-ifeq ($(VERBOSE), no)
-	@echo [CLEAN] $(OBJ)
-	@rm -rf $(OBJ)
-else
-	rm -rf $(OBJ)
-endif
-
-# Cleans Everything
-distclean: clean
-ifeq ($(VERBOSE), no)
-	@echo [CLEAN] $(ELFBIN)
-	@rm -rf $(BINDIR)/$(ELFBIN)
-else
-	rm -rf $(BINDIR)/$(ELFBIN)
-endif
-
-# Builds a C source file.
-%.$(OBJ_SUFFIX).o: %.c
-ifeq ($(VERBOSE), no)
-	@echo [CC] $@
-	@$(CC) $(CFLAGS) $< -c -o $@
-else
-	$(CC) $(CFLAGS) $< -c -o $@
-endif
+include $(BUILDDIR)/makefile.executable

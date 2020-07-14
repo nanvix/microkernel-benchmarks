@@ -40,6 +40,12 @@ export RELEASE ?= no
 # Installation Prefix
 export PREFIX ?= $(HOME)
 
+# Use Docker?
+export DOCKER ?= no
+
+# Stall regression tests?
+export SUPPRESS_TESTS ?= no
+
 export ADDONS ?=
 
 #===============================================================================
@@ -104,28 +110,30 @@ export ARFLAGS = rc
 
 #===============================================================================
 
-#
-# Default image
-#
-export IMAGE ?= kcall-local.img
+# Image Source
+export IMGSRC ?= $(IMGDIR)/$(TARGET).img
+
+# Image Name
+export IMAGE ?= microkernel-benchmarks.img
 
 # Builds everything.
 all: | make-dirs image
-
-# Builds multibinary image.
-image: all-target
-	@$(MAKE) -C $(SRCDIR) image
 
 # Make Directories
 make-dirs:
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(LIBDIR)
 
+# Builds image.
+image: all-target
+	@bash $(TOOLSDIR)/nanvix-build-image.sh $(IMAGE) $(BINDIR) $(IMGSRC)
+
 # Cleans build.
 clean: clean-target
 
 # Cleans everything.
 distclean: distclean-target
+	@rm -rf $(IMAGE)
 
 #===============================================================================
 # Contrib Install and Uninstall Rules
