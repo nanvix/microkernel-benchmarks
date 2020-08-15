@@ -22,35 +22,23 @@
 # SOFTWARE.
 #
 
-# Builds everything.
-all:
-	$(MAKE) -C mailbox all
-	$(MAKE) -C mailbox-variable-size all
-	$(MAKE) -C portal all
-	$(MAKE) -C stress all
-	$(MAKE) -C hpcs all
+include $(BUILDDIR)/makefile.config
 
-# Builds multibinary image.
-image:
-	$(MAKE) -C mailbox image
-	$(MAKE) -C mailbox-variable-size image
-	$(MAKE) -C portal image
-	$(MAKE) -C stress image
-	$(MAKE) -C hpcs image
+#===============================================================================
+# Binaries Sources and Objects
+#===============================================================================
 
-# Cleans All Object Files
-clean:
-	$(MAKE) -C mailbox clean
-	$(MAKE) -C mailbox-variable-size clean
-	$(MAKE) -C portal clean
-	$(MAKE) -C stress clean
-	$(MAKE) -C hpcs clean
+# Binary
+EXEC = comm-mailbox-variable-size.$(OBJ_SUFFIX)
 
-# Cleans Everything
-distclean: clean
-	$(MAKE) -C mailbox distclean
-	$(MAKE) -C mailbox-variable-size distclean
-	$(MAKE) -C portal distclean
-	$(MAKE) -C stress distclean
-	$(MAKE) -C hpcs distclean
+# C Source Files
+SRC += $(wildcard *.c)         \
+       $(wildcard ../main.c)   \
+       $(wildcard ../libs/*.c)
 
+# Object Files
+OBJ = $(SRC:.c=.$(OBJ_SUFFIX).o)
+
+#===============================================================================
+
+include $(BUILDDIR)/makefile.executable
